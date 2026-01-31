@@ -162,7 +162,14 @@ function SectionRow({ title, albums }) {
 
   return (
     <section>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px'
+        }}
+      >
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>
           {title}
         </h2>
@@ -173,27 +180,29 @@ function SectionRow({ title, albums }) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            fontSize: '12px',
+            gap: '6px',
+            fontSize: '11px',
             fontWeight: 'bold',
-            color: btnHover ? 'white' : '#6b7280',
-            backgroundColor: 'transparent',
-            border: 'none',
+            
+            color: 'white',
+            backgroundColor: btnHover ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '8px 16px',
+            borderRadius: '100px',
+            
             cursor: 'pointer',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
-            transition: 'color 0.2s'
+            transition: 'all 0.2s ease'
           }}
         >
           Ver Mais
-          <div style={{ transform: btnHover ? 'translateX(4px)' : 'translateX(0)', transition: 'transform 0.2s', display: 'flex' }}>
 
-          </div>
         </button>
       </div>
 
       <div
-        className="hide-scrollbar" 
+        className="hide-scrollbar"
         style={{
           display: 'flex',
           gap: '24px',

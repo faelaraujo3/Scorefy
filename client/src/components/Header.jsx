@@ -16,7 +16,7 @@ export default function Header({ onSearch }) {
         width: '100%',
         backgroundColor: 'rgba(18, 18, 21, 0.8)',
         backdropFilter: 'blur(24px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.14)',
         padding: '16px 24px',
         display: 'flex',
         alignItems: 'center',

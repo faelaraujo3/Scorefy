@@ -8,6 +8,7 @@ import { ArrowRight, Sparkles, Disc, Music } from 'lucide-react';
 import billieImg from '../assets/Billie.jpg';
 import taylorImg from '../assets/Taylor2.jpg';
 import addisonImg from '../assets/addison.png';
+import logoAddison from '../assets/addisonlogo.png';
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -35,7 +36,7 @@ export default function Home() {
       badgeColor: '#5fc7f0ff',
       icon: <Disc size={12} />,
       title: 'HIT ME HARD AND SOFT',
-      titleColor: '#f79a21ff',
+      titleColor: '#83ecffff',
       overlay: 'linear-gradient(90deg, #0a3a5aff 0%, #103b63aa 30%, rgba(11, 83, 131, 0) 70%)',
       desc: 'Confira as avaliações do álbum eleito como "Melhor da Década" pelos nossos usuários.',
       btnText: 'Visitar Álbum'
@@ -61,8 +62,8 @@ export default function Home() {
       badgeColor: '#feffc4ff',
       icon: <Music size={12} />,
       title: 'ADDISON',
-      titleColor: '#81e8faff',
-      overlay: 'linear-gradient(90deg, #b3901df3 0%, #58440baa 30%, rgba(128, 91, 12, 0) 80%)',
+      titleImage: logoAddison,
+      overlay: 'linear-gradient(90deg, #d4af36f3 0%, #58440baa 30%, rgba(128, 91, 12, 0) 80%)',
       desc: 'De celebridade da internet à indicada ao Grammy, conheça o álbum da Revelação do Ano pelo Scorefy.',
       btnText: 'Visitar Álbum'
     }
@@ -146,7 +147,7 @@ export default function Home() {
               <div
                 style={{
                   position: 'relative',
-                  borderRadius: '32px', 
+                  borderRadius: '32px',
                   overflow: 'hidden',
                   border: '1px solid rgba(255, 255, 255, 0.05)',
                   height: '400px',
@@ -202,7 +203,7 @@ export default function Home() {
                             padding: '4px 12px',
                             borderRadius: '9999px',
                             border: '1px solid rgba(255, 255, 255, 0.1)',
-                            fontSize: '11px', 
+                            fontSize: '11px',
                             fontWeight: 'bold',
                             marginBottom: '12px',
                             backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -213,26 +214,52 @@ export default function Home() {
                         </div>
 
                         {/* Título */}
-                        <h1
-                          style={{
-                            fontSize: slide.titleSize || '40px', 
-                            color: slide.titleColor || 'white',
-                            fontWeight: '900',
-                            marginBottom: '12px',
-                            lineHeight: 1.1,
-                            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                          }}
-                        >
-                          {slide.title}
-                        </h1>
+                        {slide.titleImage ? (
+                          <div
+                            role="img"
+                            aria-label={slide.title}
+                            style={{
+                              height: '120px', 
+                              marginBottom: '5px',
+                              width: '110%',
+
+                              backgroundColor: slide.titleColor || '#6adbdfff',
+
+                              maskImage: `url(${slide.titleImage})`,
+                              WebkitMaskImage: `url(${slide.titleImage})`, 
+
+                              maskSize: 'contain',
+                              WebkitMaskSize: 'contain',
+
+                              maskRepeat: 'no-repeat',
+                              WebkitMaskRepeat: 'no-repeat',
+
+                              maskPosition: 'left center',
+                              WebkitMaskPosition: 'left center'
+                            }}
+                          />
+                        ) : (
+                          <h1
+                            style={{
+                              fontSize: slide.titleSize || '40px',
+                              color: slide.titleColor || 'white',
+                              fontWeight: '900',
+                              marginBottom: '12px',
+                              lineHeight: 1.1,
+                              textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                            }}
+                          >
+                            {slide.title}
+                          </h1>
+                        )}
 
                         {/* Descrição */}
                         <p
                           style={{
                             color: '#e5e7eb',
                             marginBottom: '24px',
-                            fontSize: '16px', 
-                            maxWidth: '480px', 
+                            fontSize: '16px',
+                            maxWidth: '480px',
                             textShadow: '0 1px 2px rgba(0,0,0,0.5)'
                           }}
                         >
@@ -250,7 +277,7 @@ export default function Home() {
                             position: 'absolute',
                             top: 0,
                             right: 0,
-                            width: '400px', 
+                            width: '400px',
                             height: '400px',
                             borderRadius: '50%',
                             filter: 'blur(80px)',

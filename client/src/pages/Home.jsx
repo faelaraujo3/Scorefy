@@ -61,7 +61,7 @@ export default function Home() {
       badgeColor: '#feffc4ff',
       icon: <Music size={12} />,
       title: 'ADDISON',
-      titleColor: '#48d9ecff',
+      titleColor: '#81e8faff',
       overlay: 'linear-gradient(90deg, #b3901df3 0%, #58440baa 30%, rgba(128, 91, 12, 0) 80%)',
       desc: 'De celebridade da internet à indicada ao Grammy, conheça o álbum da Revelação do Ano pelo Scorefy.',
       btnText: 'Visitar Álbum'

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Star, StarHalf } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function AlbumCard({ album }) {
   const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
 
   // Função para gerar as estrelas
   const renderStars = (rating) => {
@@ -38,6 +40,7 @@ export default function AlbumCard({ album }) {
 
   return (
     <div
+      onClick={() => navigate(`/album/${album.id}`)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{

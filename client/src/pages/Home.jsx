@@ -13,14 +13,14 @@ import logoAddison from '../assets/addisonlogo.png';
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // --- LÓGICA DO CARROSSEL ---
+  // BANNER EM CARROSSEL - apresenta as novidades do site
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
     {
       id: 1,
       type: 'gradient',
-      bg: 'linear-gradient(90deg, #0e4277ff 0%, #267fbbff 100%)',
+      bg: 'linear-gradient(90deg, #104e8bff 0%, #308eccff 100%)',
       badge: 'Recomendado',
       badgeColor: '#caf3f8ff',
       icon: <Sparkles size={12} />,
@@ -37,7 +37,7 @@ export default function Home() {
       icon: <Disc size={12} />,
       title: 'HIT ME HARD AND SOFT',
       titleColor: '#83ecffff',
-      overlay: 'linear-gradient(90deg, #0a3a5aff 0%, #103b63aa 30%, rgba(11, 83, 131, 0) 70%)',
+      overlay: 'linear-gradient(90deg, #0e5f94ff 0%, #11528faa 30%, rgba(11, 83, 131, 0) 70%)',
       desc: 'Confira as avaliações do álbum eleito como "Melhor da Década" pelos nossos usuários.',
       btnText: 'Visitar Álbum'
     },
@@ -50,7 +50,7 @@ export default function Home() {
       icon: <Music size={12} />,
       title: 'THE LIFE OF A SHOWGIRL',
       titleColor: '#f8dfb0ff',
-      overlay: 'linear-gradient(90deg, #4b240dff 0%, #451a03aa 30%, rgba(92, 39, 10, 0) 80%)',
+      overlay: 'linear-gradient(90deg, #793322ff 10%, #86352aaa 40%, rgba(92, 39, 10, 0) 80%)',
       desc: 'Confira as reações mistas da comunidade ao lançamento mais recente de Taylor Swift.',
       btnText: 'Visitar Álbum'
     },
@@ -59,11 +59,11 @@ export default function Home() {
       type: 'image',
       bg: addisonImg,
       badge: 'Em Alta',
-      badgeColor: '#feffc4ff',
+      badgeColor: '#fffdebff',
       icon: <Music size={12} />,
       title: 'ADDISON',
       titleImage: logoAddison,
-      overlay: 'linear-gradient(90deg, #d4af36f3 0%, #58440baa 30%, rgba(128, 91, 12, 0) 80%)',
+      overlay: 'linear-gradient(90deg, #d1a820f3 10%, #b99328aa 40%, rgba(173, 122, 12, 0) 80%)',
       desc: 'De celebridade da internet à indicada ao Grammy, conheça o álbum da Revelação do Ano pelo Scorefy.',
       btnText: 'Visitar Álbum'
     }
@@ -76,7 +76,7 @@ export default function Home() {
     }, 10000);
     return () => clearInterval(interval);
   }, [slides.length]);
-  // --- FIM LÓGICA CARROSSEL ---
+
 
   const safeAlbums = mockAlbums || [];
   const trendingAlbums = safeAlbums.slice(0, 5);
@@ -95,7 +95,6 @@ export default function Home() {
           body { 
             margin: 0; 
             background-color: #121215; 
-            /* RESTAURADO: Fonte Plus Jakarta Sans */
             font-family: 'Plus Jakarta Sans', sans-serif; 
           }
         `}
@@ -223,7 +222,7 @@ export default function Home() {
                               marginBottom: '5px',
                               width: '110%',
 
-                              backgroundColor: slide.titleColor || '#6adbdfff',
+                              backgroundColor: slide.titleColor || '#008dc5ff',
 
                               maskImage: `url(${slide.titleImage})`,
                               WebkitMaskImage: `url(${slide.titleImage})`, 

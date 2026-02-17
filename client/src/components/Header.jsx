@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Bell, User, Flame, Globe, Sparkles } from 'lucide-react';
 import logoScorefy from '../assets/logoscorefy.png';
 
-export default function Header({ onSearch }) {
+export default function Header({ onSearch, hideSearch }) {
   const [bellHover, setBellHover] = useState(false);
   const [userHover, setUserHover] = useState(false);
   const [inputFocus, setInputFocus] = useState(false);
+  
+  const navigate = useNavigate();
 
   return (
     <header
@@ -24,7 +27,7 @@ export default function Header({ onSearch }) {
         boxSizing: 'border-box'
       }}
     >
-      {/*  Logo e titulo do site */}
+      {/* Logo e titulo do site */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', zIndex: 20 }}>
         <img
           src={logoScorefy}
@@ -65,42 +68,45 @@ export default function Header({ onSearch }) {
         <NavButton icon={<Sparkles size={18} />} label="Lançamentos" />
       </nav>
 
-      {/*  Busca e Perfil */}
+      {/* Busca e Perfil */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 20 }}>
-        {/* Input de Busca */}
-        <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            placeholder="Buscar..."
-            onChange={(e) => onSearch?.(e.target.value)}
-            onFocus={() => setInputFocus(true)}
-            onBlur={() => setInputFocus(false)}
-            style={{
-              backgroundColor: inputFocus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '9999px',
-              padding: '8px 16px 8px 40px',
-              fontSize: '14px',
-              width: inputFocus ? '240px' : '192px',
-              color: 'white',
-              outline: 'none',
-              transition: 'all 0.2s ease'
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              left: '14px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: inputFocus ? 'white' : '#9ca3af',
-              pointerEvents: 'none',
-              display: 'flex'
-            }}
-          >
-            <Search size={16} />
+        
+        {/* Renderiza a busca apenas se hideSearch for false ou undefined */}
+        {!hideSearch && (
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              placeholder="Buscar..."
+              onChange={(e) => onSearch?.(e.target.value)}
+              onFocus={() => setInputFocus(true)}
+              onBlur={() => setInputFocus(false)}
+              style={{
+                backgroundColor: inputFocus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '9999px',
+                padding: '8px 16px 8px 40px',
+                fontSize: '14px',
+                width: inputFocus ? '240px' : '192px',
+                color: 'white',
+                outline: 'none',
+                transition: 'all 0.2s ease'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                left: '14px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: inputFocus ? 'white' : '#9ca3af',
+                pointerEvents: 'none',
+                display: 'flex'
+              }}
+            >
+              <Search size={16} />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Notificação */}
         <button
@@ -137,6 +143,7 @@ export default function Header({ onSearch }) {
 
         {/* Avatar Usuário */}
         <div
+          onClick={() => navigate('/profile')}
           onMouseEnter={() => setUserHover(true)}
           onMouseLeave={() => setUserHover(false)}
           style={{
@@ -172,45 +179,8 @@ export default function Header({ onSearch }) {
 
 function NavButton({ icon, label, active }) {
   const [isHovered, setIsHovered] = useState(false);
-
-  const baseStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 20px',
-    borderRadius: '9999px',
-    fontSize: '14px',
-    fontWeight: '500',
-    transition: 'all 0.2s',
-    border: 'none',
-    cursor: 'pointer',
-    outline: 'none'
-  };
-
-  const activeStyle = {
-    backgroundColor: '#0891b2', 
-    color: 'white',
-    boxShadow: '0 10px 15px -3px rgba(8, 145, 178, 0.3)' 
-  };
-
-  const inactiveStyle = {
-    backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-    color: isHovered ? 'white' : '#9ca3af'
-  };
-
-  const finalStyle = {
-    ...baseStyle,
-    ...(active ? activeStyle : inactiveStyle)
-  };
-
-  return (
-    <button
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      style={finalStyle}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
+  const baseStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '9999px', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s', border: 'none', cursor: 'pointer', outline: 'none' };
+  const activeStyle = { backgroundColor: '#0891b2', color: 'white', boxShadow: '0 10px 15px -3px rgba(8, 145, 178, 0.3)' };
+  const inactiveStyle = { backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.05)' : 'transparent', color: isHovered ? 'white' : '#9ca3af' };
+  return <button onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{...baseStyle, ...(active ? activeStyle : inactiveStyle)}}>{icon}<span>{label}</span></button>;
 }

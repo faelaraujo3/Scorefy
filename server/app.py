@@ -4,7 +4,6 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
 from bson import ObjectId
-
 app = Flask(__name__)
 CORS(app)
 
@@ -157,6 +156,47 @@ def obter_notificacoes(id_user):
     for a in avisos: a['_id'] = str(a['_id'])
     return jsonify(avisos), 200
 
+@app.route('/api/reviews/<review_id>/responder', methods=['POST'])
+def responder_review(review_id):
+    data = request.json
+    id_resp = data.get('id_user')
+    user_resp = usuarios_col.find_one({"id_user": id_resp})
+    
+    nova_resposta = {
+        "id_user": id_resp,
+        "username": user_resp.get('username') if user_resp else data.get('username', 'Alguém'),
+        "texto": data.get('texto'),
+        "data": datetime.now().strftime("%d/%m/%Y %H:%M")
+    }
+
+    # Adiciona a resposta ao array da review original
+    review_alvo = criticas_col.find_one_and_update(
+        {"_id": ObjectId(review_id)},
+        {"$push": {"respostas": nova_resposta}}
+    )
+
+    # Notifica o dono da review (se não for ele mesmo respondendo)
+    if review_alvo and review_alvo['id_user'] != id_resp:
+        notificacoes_col.insert_one({
+            "para_id_user": review_alvo['id_user'],
+            "mensagem": f"{nova_resposta['username']} respondeu sua review!",
+            "tipo": "resposta",
+            "lida": False,
+            "data": datetime.now().strftime("%d/%m/%Y %H:%M")
+        })
+
+    return jsonify({"message": "Resposta enviada!"}), 200
+
+@app.route('/api/notificacoes/<notif_id>/ler', methods=['PATCH'])
+def marcar_como_lida(notif_id):
+    notificacoes_col.update_one(
+        {"_id": ObjectId(notif_id)},
+        {"$set": {"lida": True}}
+    )
+    return jsonify({"status": "sucesso"}), 200
+
+
+
 # --- SEÇÕES DA HOME (Lógica Completa com Ajustes) ---
 def buscar_detalhes_album(lista_agregada):
     ids = [item["_id"] for item in lista_agregada]
@@ -198,23 +238,29 @@ def obter_secoes_home():
 
 # Função auxiliar para formatar a resposta
 def formatar_albuns(lista_ids_ou_docs):
+    print(f">>> Processando {len(lista_ids_ou_docs)} álbuns para a listagem...")
     resultados = []
-    # Se a lista for de dicionários (agregados), extrai os IDs
+    
+    # Extrai IDs se vier de uma agregação do MongoDB
     ids = [item["_id"] if "_id" in item else item["id_album"] for item in lista_ids_ou_docs] if lista_ids_ou_docs and isinstance(lista_ids_ou_docs[0], dict) else []
     
-    # Se a lista já for de documentos completos (caso do 'novos'), usa direto, senão busca
-    if not ids: # Caso seja lista direta de objetos
+    if not ids:
         albuns_db = lista_ids_ou_docs
     else:
+        # Busca os documentos completos no banco
         albuns_db = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
 
-    # Adiciona nome do artista e formata
     for album in albuns_db:
         art = artistas_col.find_one({"id_artista": album["id_artista"]})
         album["artist"] = art["name"] if art else "Desconhecido"
-        # Se você já tiver reviews no banco para calcular a nota real, coloque aqui.
-        # Por enquanto mantemos fixo ou busca da média se tiver.
-        album["rating"] = 4.5 
+        
+        # CÁLCULO REAL DA MÉDIA
+        reviews_album = list(criticas_col.find({"id_album": album["id_album"]}))
+        notas = [r['nota'] for r in reviews_album if 'nota' in r]
+        
+        # Se não tiver nota, fica 0.0. Se tiver, calcula a média.
+        album["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
+        
         resultados.append(album)
     
     return resultados
@@ -247,9 +293,11 @@ def lista_melhores():
 
 @app.route('/api/lista/lancamentos', methods=['GET'])
 def lista_lancamentos():
+    # Busca os álbuns ordenados por ano
     albuns_cursor = albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(50)
-    albuns_lista = list(albuns_cursor)
-
+    
+    # EM VEZ DE MONTAR O DICIONÁRIO NA MÃO COM 4.5, USAMOS A FUNÇÃO QUE CALCULA A MÉDIA
+    return jsonify(formatar_albuns(list(albuns_cursor)))
 
     resultados = []
     for album in albuns_lista:

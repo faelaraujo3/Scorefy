@@ -367,6 +367,40 @@ def lista_lancamentos():
     
     return jsonify(formatar_albuns(list(albuns_cursor)))
 
+# --- ADICIONAR ÁLBUM AOS FAVORITOS (MÁX 5) ---
+@app.route("/api/users/<int:id_user>/favorites", methods=["POST"])
+def adicionar_favorito(id_user):
+    data = request.json or {}
+    id_album = data.get("id_album")
+
+    if id_album is None:
+        return jsonify({"error": "id_album é obrigatório"}), 400
+
+    # garante int (se vier string)
+    try:
+        id_album = int(id_album)
+    except (TypeError, ValueError):
+        return jsonify({"error": "id_album deve ser número"}), 400
+
+    usuario = usuarios_col.find_one({"id_user": id_user})
+    if not usuario:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    favoritos = usuario.get("albuns_favoritos", [])
+
+    if id_album in favoritos:
+        return jsonify({"error": "Álbum já está nos favoritos"}), 400
+
+    if len(favoritos) >= 5:
+        return jsonify({"error": "Limite de 5 favoritos atingido"}), 400
+
+    usuarios_col.update_one(
+        {"id_user": id_user},
+        {"$push": {"albuns_favoritos": id_album}}
+    )
+
+    return jsonify({"message": "Álbum adicionado aos favoritos"}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
 # Conecta ao MongoDB (localhost para rodar no seu Debian)
-client = MongoClient("mongodb://localhost:27017")
+client = MongoClient("mongodb://mongodb:27017")
 db = client["scorefy_db"]
 
 # 1. Limpa os dados antigos

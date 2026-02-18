@@ -39,19 +39,20 @@ def registrar():
     data = request.json
     email = data.get('email')
     senha = data.get('senha')
+    nome = data.get('nome')
 
-    if not email or not senha:
-        return jsonify({"error": "E-mail e senha são obrigatórios"}), 400
+    if not email or not senha or not nome:
+        return jsonify({"error": "E-mail, senha e nome são obrigatórios"}), 400
 
     if usuarios_col.find_one({"email": email}):
-        return jsonify({"error": "E-mail já cadastrado"}), 400
+        return jsonify({"error": "E-mail já cadastrado!"}), 400
 
-    # Estrutura inicial do usuário (username permanece em inglês conforme Rafael sugeriu)
+    # Estrutura inicial do usuário
     novo_usuario = {
         "email": email,
         "senha": senha,
-        "username": "",    # Será definido na atualização de perfil
-        "nome": "",        # Nome de exibição
+        "username": "",
+        "nome": nome,
         "bio": "",
         "localizacao": "",
         "albuns_favoritos": []

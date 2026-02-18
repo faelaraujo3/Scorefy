@@ -10,6 +10,8 @@ db.albums.delete_many({})
 db.artists.delete_many({})
 db.reviews.delete_many({})
 db.playlists.delete_many({})
+db.reviews.delete_many({})
+db.notifications.delete_many({})
 
 # 2. Povoamento de Artistas (Completo)
 db.artists.insert_many([

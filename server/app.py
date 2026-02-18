@@ -247,9 +247,27 @@ def lista_melhores():
 
 @app.route('/api/lista/lancamentos', methods=['GET'])
 def lista_lancamentos():
-    # Ordena por ano decrescente
-    albuns = list(albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(50))
-    return jsonify(formatar_albuns(albuns))
+    albuns_cursor = albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(50)
+    albuns_lista = list(albuns_cursor)
+
+
+    resultados = []
+    for album in albuns_lista:
+        art = artistas_col.find_one({"id_artista": album.get("id_artista")})
+        
+        album_formatado = {
+            "id_album": album.get("id_album"),
+            "title": album.get("title"),
+            "year": album.get("year"),
+            "genre": album.get("genre"),
+            "image": album.get("image"),
+            "description": album.get("description", ""),
+            "artist": art["name"] if art else "Desconhecido",
+            "rating": album.get("rating", 4.5)
+        }
+        resultados.append(album_formatado)
+
+    return jsonify(resultados)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

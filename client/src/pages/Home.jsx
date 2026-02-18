@@ -11,31 +11,35 @@ import logoAddison from '../assets/addisonlogo.png';
 
 export default function Home({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("");
-  
+  const [sections, setSections] = useState({ trending: [], top_rated: [], new_releases: [] });
+
   // Estados para dados reais do Backend
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Busca os álbuns do MongoDB ao carregar a página
+  // carrega as seções de albuns do backend ao montar o componente
   useEffect(() => {
-    fetch('http://localhost:5000/api/albuns')
+    fetch('http://localhost:5000/api/home/secoes')
       .then(res => res.json())
       .then(data => {
-        // Mapeia os dados do backend
-        const mappedAlbums = data.map(item => ({
+        const format = (list) => list.map(item => ({
           id: item.id_album,
           title: item.title,
           artist: item.artist || item.nome_artista,
           image: item.image,
-          rating: 4.8, // Nota fixa até implementarmos o cálculo de média real
-          year: item.year,
-          genre: item.genre
+          rating: item.media ? item.media.toFixed(1) : 4.5,
+          year: item.year
         }));
-        setAlbums(mappedAlbums);
+
+        setSections({
+          trending: format(data.trending),
+          top_rated: format(data.top_rated),
+          new_releases: format(data.new_releases)
+        });
         setLoading(false);
       })
       .catch(err => {
-        console.error("Erro ao buscar álbuns:", err);
+        console.error("Erro ao carregar seções:", err);
         setLoading(false);
       });
   }, []);
@@ -149,9 +153,9 @@ export default function Home({ user, onLogout }) {
           }}
         >
           {loading ? (
-             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px', color: '#9ca3af' }}>
-                Carregando biblioteca...
-             </div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px', color: '#9ca3af' }}>
+              Carregando biblioteca...
+            </div>
           ) : searchQuery ? (
             <div>
               <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' }}>
@@ -249,12 +253,12 @@ export default function Home({ user, onLogout }) {
                             role="img"
                             aria-label={slide.title}
                             style={{
-                              height: '120px', 
+                              height: '120px',
                               marginBottom: '5px',
                               width: '110%',
                               backgroundColor: slide.titleColor || '#008dc5ff',
                               maskImage: `url(${slide.titleImage})`,
-                              WebkitMaskImage: `url(${slide.titleImage})`, 
+                              WebkitMaskImage: `url(${slide.titleImage})`,
                               maskSize: 'contain',
                               WebkitMaskSize: 'contain',
                               maskRepeat: 'no-repeat',
@@ -350,9 +354,9 @@ export default function Home({ user, onLogout }) {
               </div>
 
               {/* Seções dinâmicas com dados do banco */}
-              <SectionRow title="Em Alta" albums={trendingAlbums} />
-              <SectionRow title="Melhores Avaliações" albums={topRatedAlbums} />
-              <SectionRow title="Novos Lançamentos" albums={newReleases} />
+              <SectionRow title="Em Alta" albums={sections.trending} />
+              <SectionRow title="Melhores Avaliações" albums={sections.top_rated} />
+              <SectionRow title="Novos Lançamentos" albums={sections.new_releases} />
             </>
           )}
         </main>

@@ -1,7 +1,9 @@
 from flask import Flask, jsonify, request
 from pymongo import MongoClient
 from flask_cors import CORS
+from datetime import datetime, timedelta
 import os
+
 
 app = Flask(__name__)
 CORS(app)
@@ -119,6 +121,68 @@ def listar_albuns():
     
     resultados = list(albuns_col.aggregate(pipeline))
     return jsonify(resultados), 200
+
+@app.route('/api/home/secoes', methods=['GET'])
+def obter_secoes_home():
+    # 1. MELHORES AVALIAÇÕES (Overall)
+    # Agrupa críticas por id_album, calcula média e ordena
+    pipeline_top = [
+        {"$group": {
+            "_id": "$id_album",
+            "media": {"$avg": "$rating"},
+            "total": {"$sum": 1}
+        }},
+        {"$sort": {"media": -1, "total": -1}},
+        {"$limit": 8}
+    ]
+    melhores_ids = list(criticas_col.aggregate(pipeline_top))
+    
+    # 2. EM ALTA (Mais avaliações na última semana)
+    uma_semana_atras = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    pipeline_trending = [
+        {"$match": {"created_at": {"$gte": uma_semana_atras}}},
+        {"$group": {
+            "_id": "$id_album",
+            "contagem": {"$sum": 1}
+        }},
+        {"$sort": {"contagem": -1}},
+        {"$limit": 8}
+    ]
+    trending_ids = list(criticas_col.aggregate(pipeline_trending))
+
+    # Função auxiliar para buscar detalhes dos álbuns com Info do Artista
+    def buscar_detalhes(lista_agregada):
+        ids = [item["_id"] for item in lista_agregada]
+        albuns = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
+        # Adiciona o nome do artista (lookup manual para simplificar)
+        for alubm in albuns:
+            art = artistas_col.find_one({"id_artista": alubm["id_artista"]})
+            alubm["artist"] = art["name"] if art else "Desconhecido"
+        return albuns
+
+    # 3. NOVOS LANÇAMENTOS (Pelo campo 'year' do álbum)
+    novos_lancamentos = list(albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(8))
+    for nl in novos_lancamentos:
+        art = artistas_col.find_one({"id_artista": nl["id_artista"]})
+        nl["artist"] = art["name"] if art else "Desconhecido"
+
+    # Se não houver avaliações ainda, retorna álbuns aleatórios para as seções não ficarem vazias
+    if not melhores_ids:
+        fallback = list(albuns_col.find({}, {"_id": 0}).limit(8))
+        for f in fallback:
+            art = artistas_col.find_one({"id_artista": f["id_artista"]})
+            f["artist"] = art["name"] if art else "Desconhecido"
+        return jsonify({
+            "trending": fallback,
+            "top_rated": fallback,
+            "new_releases": novos_lancamentos
+        })
+
+    return jsonify({
+        "trending": buscar_detalhes(trending_ids),
+        "top_rated": buscar_detalhes(melhores_ids),
+        "new_releases": novos_lancamentos
+    })
 
 if __name__ == '__main__':
     # Roda na porta 5000

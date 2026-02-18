@@ -62,46 +62,78 @@ def register_user():
     users_col.insert_one(data)
     return jsonify({"message": "Usuário cadastrado!"}), 201
 
-# --- ROTAS DE ARTISTAS ---
-
-@app.route('/api/artists', methods=['POST'])
-def add_artist():
-    data = request.json
-    # Validações de texto (Nome, Bio, Gênero, País)
-    for campo in ['name', 'bio', 'genre', 'country']:
-        if not validar_string_segura(data.get(campo)):
-            return jsonify({"error": f"Campo {campo} inválido"}), 400
-    
-    if not validar_ano(data.get('formed_year')):
-        return jsonify({"error": "Ano de formação inválido"}), 400
-
-    artists_col.insert_one(data)
-    return jsonify({"message": "Artista adicionado"}), 201
-
+# --- LISTAR ARTISTAS (Com filtro opcional de gênero) ---
 @app.route('/api/artists', methods=['GET'])
 def get_artists():
-    artists = list(artists_col.find({}, {"_id": 0}))
+    genre = request.args.get('genre')
+    query = {}
+    if genre:
+        query = {"genre": {"$regex": f"^{genre}$", "$options": "i"}}
+    artists = list(artists_col.find(query, {"_id": 0}))
     return jsonify(artists), 200
 
-# --- ROTAS DE ÁLBUNS ---
-
-@app.route('/api/albums', methods=['POST'])
-def add_album():
-    data = request.json
-    for campo in ['title', 'description', 'genre']:
-        if not validar_string_segura(data.get(campo)):
-            return jsonify({"error": f"Campo {campo} inválido"}), 400
-            
-    if not validar_ano(data.get('year')):
-        return jsonify({"error": "Ano do álbum inválido"}), 400
-    
-    albums_col.insert_one(data)
-    return jsonify({"message": "Álbum adicionado"}), 201
-
+# --- LISTAR ÁLBUNS (Com filtro opcional de gênero) ---
 @app.route('/api/albums', methods=['GET'])
 def get_albums():
-    albums = list(albums_col.find({}, {"_id": 0}))
+    genre = request.args.get('genre')
+    
+    pipeline = [
+        # 1. Filtra pelo gênero (se houver)
+        {"$match": {"genre": {"$regex": f"^{genre}$", "$options": "i"}}} if genre else {"$match": {}},
+        
+        # 2. Busca os dados do artista correspondente
+        {
+            "$lookup": {
+                "from": "artists",
+                "localField": "id_artista",
+                "foreignField": "id_artista",
+                "as": "artist_info"
+            }
+        },
+        
+        # 3. Transforma a lista de artistas em um objeto único
+        {"$unwind": "$artist_info"},
+        
+        # 4. Projeta TODOS os campos necessários
+        {"$project": {
+            "_id": 0,
+            "id_album": 1,           # Adicionado
+            "id_artista": 1,         # Adicionado
+            "title": 1,
+            "genre": 1,
+            "year": 1,
+            "description": 1,       # Adicionado
+            "image": 1,
+            "artist_name": "$artist_info.name"
+        }}
+    ]
+    
+    albums = list(albums_col.aggregate(pipeline))
     return jsonify(albums), 200
+# --- ROTA DE BUSCA GLOBAL (Necessária para o Front) ---
+@app.route('/api/search', methods=['GET'])
+def search():
+    query = request.args.get('q', '')
+    if not query:
+        return jsonify({"artists": [], "albums": []}), 200
+    
+    # 1. Busca artistas pelo nome
+    artists = list(artists_col.find({"name": {"$regex": query, "$options": "i"}}, {"_id": 0}))
+    
+    # 2. Busca álbuns pelo título
+    albums = list(albums_col.find({"title": {"$regex": query, "$options": "i"}}, {"_id": 0}))
+    
+    # 3. Lógica extra: Se achamos artistas, vamos buscar os álbuns deles também!
+    if artists:
+        for artist in artists:
+            artist_id = artist.get("id_artista")
+            extra_albums = list(albums_col.find({"id_artista": artist_id}, {"_id": 0}))
+            # Adiciona apenas os que já não foram encontrados pelo título
+            for ea in extra_albums:
+                if ea not in albums:
+                    albums.append(ea)
+
+    return jsonify({"artists": artists, "albums": albums}), 200
 
 # --- ROTAS DE REVIEWS ---
 

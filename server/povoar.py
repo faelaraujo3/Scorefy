@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
 # Conecta ao MongoDB (certifique-se de que o container está rodando)
-client = MongoClient("mongodb://mongodb:27017")
+client = MongoClient("mongodb://localhost:27017")
 db = client["scorefy_db"]
 
 # 1. Limpa os dados antigos para não duplicar

@@ -50,7 +50,7 @@ def registrar():
     if usuarios_col.find_one({"email": email}):
         return jsonify({"error": "E-mail já cadastrado!"}), 400
 
-    # Estrutura do usuário
+    # Estrutura inicial do usuário
     novo_usuario = {
         "email": email,
         "senha": senha,

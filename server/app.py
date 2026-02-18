@@ -4,7 +4,6 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
 from bson import ObjectId
-
 app = Flask(__name__)
 CORS(app)
 
@@ -110,13 +109,28 @@ def postar_review():
 
 @app.route('/api/albuns/<int:id_album>', methods=['GET'])
 def detalhes_album(id_album):
+    # 1. Busca o álbum
     album = albuns_col.find_one({"id_album": id_album}, {"_id": 0})
     if not album: return jsonify({"error": "Álbum não encontrado"}), 404
+
+    if "id_artista" in album:
+        artista_db = artistas_col.find_one({"id_artista": album["id_artista"]})
+        album["artist"] = artista_db["name"] if artista_db else "Desconhecido"
+    else:
+        album["artist"] = "Desconhecido"
     reviews = list(criticas_col.find({"id_album": id_album}))
     notas = [r['nota'] for r in reviews if 'nota' in r]
+    
     media = sum(notas) / len(notas) if notas else 0
+    
     for r in reviews: r['_id'] = str(r['_id'])
-    return jsonify({"album": album, "nota_media": round(media, 1), "total_reviews": len(reviews), "reviews": reviews}), 200
+    
+    return jsonify({
+        "album": album, 
+        "nota_media": round(media, 1), 
+        "total_reviews": len(reviews), 
+        "reviews": reviews
+    }), 200
 
 # --- INTERAÇÕES E NOTIFICAÇÕES ---
 
@@ -157,7 +171,48 @@ def obter_notificacoes(id_user):
     for a in avisos: a['_id'] = str(a['_id'])
     return jsonify(avisos), 200
 
-# --- SEÇÕES DA HOME ---
+@app.route('/api/reviews/<review_id>/responder', methods=['POST'])
+def responder_review(review_id):
+    data = request.json
+    id_resp = data.get('id_user')
+    user_resp = usuarios_col.find_one({"id_user": id_resp})
+    
+    nova_resposta = {
+        "id_user": id_resp,
+        "username": user_resp.get('username') if user_resp else data.get('username', 'Alguém'),
+        "texto": data.get('texto'),
+        "data": datetime.now().strftime("%d/%m/%Y %H:%M")
+    }
+
+    # Adiciona a resposta ao array da review original
+    review_alvo = criticas_col.find_one_and_update(
+        {"_id": ObjectId(review_id)},
+        {"$push": {"respostas": nova_resposta}}
+    )
+
+    # Notifica o dono da review (se não for ele mesmo respondendo)
+    if review_alvo and review_alvo['id_user'] != id_resp:
+        notificacoes_col.insert_one({
+            "para_id_user": review_alvo['id_user'],
+            "mensagem": f"{nova_resposta['username']} respondeu sua review!",
+            "tipo": "resposta",
+            "lida": False,
+            "data": datetime.now().strftime("%d/%m/%Y %H:%M")
+        })
+
+    return jsonify({"message": "Resposta enviada!"}), 200
+
+@app.route('/api/notificacoes/<notif_id>/ler', methods=['PATCH'])
+def marcar_como_lida(notif_id):
+    notificacoes_col.update_one(
+        {"_id": ObjectId(notif_id)},
+        {"$set": {"lida": True}}
+    )
+    return jsonify({"status": "sucesso"}), 200
+
+
+
+# --- SEÇÕES DA HOME (Lógica Completa com Ajustes) ---
 def buscar_detalhes_album(lista_agregada):
     if not lista_agregada:
         return []
@@ -227,18 +282,35 @@ def obter_secoes_home():
 # Função auxiliar para formatar a resposta
 def formatar_albuns(lista_ids_ou_docs):
     resultados = []
-    ids = [item["_id"] if "_id" in item else item["id_album"] for item in lista_ids_ou_docs] if lista_ids_ou_docs and isinstance(lista_ids_ou_docs[0], dict) else []
     
-    if not ids:
-        albuns_db = lista_ids_ou_docs
-    else:
-        albuns_db = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
+    if not lista_ids_ou_docs:
+        return []
 
-    # Adiciona nome do artista e formata
+    primeiro_item = lista_ids_ou_docs[0]
+    
+    if "title" in primeiro_item:
+        albuns_db = lista_ids_ou_docs
+        ids_para_ordenar = None 
+    else:
+        # Caso contrário, extraímos os IDs para buscar
+        ids_para_ordenar = [item["_id"] if "_id" in item else item["id_album"] for item in lista_ids_ou_docs]
+        albuns_db = list(albuns_col.find({"id_album": {"$in": ids_para_ordenar}}, {"_id": 0}))
+
+        # Reordena a lista do banco para bater com a ordem do ranking
+        if ids_para_ordenar:
+            albuns_db.sort(key=lambda x: ids_para_ordenar.index(x["id_album"]))
+
     for album in albuns_db:
         art = artistas_col.find_one({"id_artista": album["id_artista"]})
         album["artist"] = art["name"] if art else "Desconhecido"
-        album["rating"] = 4.5 
+        
+        # CÁLCULO REAL DA MÉDIA
+        reviews_album = list(criticas_col.find({"id_album": album["id_album"]}))
+        notas = [r['nota'] for r in reviews_album if 'nota' in r]
+        
+        # Se não tiver nota, fica 0.0. Se tiver, calcula a média.
+        album["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
+        
         resultados.append(album)
     
     return resultados
@@ -246,15 +318,20 @@ def formatar_albuns(lista_ids_ou_docs):
 # Rota de listagem para albuns em alta, melhores avaliações e lançamentos
 @app.route('/api/lista/em-alta', methods=['GET'])
 def lista_em_alta():
-    uma_semana_atras = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    uma_semana_atras = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+    
     pipeline = [
-        {"$match": {"created_at": {"$gte": uma_semana_atras}}},
+        {"$match": {"data_postagem": {"$gte": uma_semana_atras}}},
         {"$group": {"_id": "$id_album", "contagem": {"$sum": 1}}},
         {"$sort": {"contagem": -1}},
         {"$limit": 50} 
     ]
     ids = list(criticas_col.aggregate(pipeline))
-    if not ids: return jsonify(formatar_albuns(list(albuns_col.find({}, {"_id": 0}).limit(20))))
+    
+    if not ids: 
+        fallback = list(albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(20))
+        return jsonify(formatar_albuns(fallback))
+        
     return jsonify(formatar_albuns(ids))
 
 @app.route('/api/lista/melhores', methods=['GET'])
@@ -270,27 +347,11 @@ def lista_melhores():
 
 @app.route('/api/lista/lancamentos', methods=['GET'])
 def lista_lancamentos():
+    # Busca os álbuns ordenados por ano do mais novo para o mais antigo
     albuns_cursor = albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(50)
-    albuns_lista = list(albuns_cursor)
+    
+    return jsonify(formatar_albuns(list(albuns_cursor)))
 
-
-    resultados = []
-    for album in albuns_lista:
-        art = artistas_col.find_one({"id_artista": album.get("id_artista")})
-        
-        album_formatado = {
-            "id_album": album.get("id_album"),
-            "title": album.get("title"),
-            "year": album.get("year"),
-            "genre": album.get("genre"),
-            "image": album.get("image"),
-            "description": album.get("description", ""),
-            "artist": art["name"] if art else "Desconhecido",
-            "rating": album.get("rating", 4.5)
-        }
-        resultados.append(album_formatado)
-
-    return jsonify(resultados)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

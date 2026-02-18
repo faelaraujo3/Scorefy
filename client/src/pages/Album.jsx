@@ -1,350 +1,275 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { Heart, Plus, Star, StarHalf, MessageCircle, MoreHorizontal, CornerDownRight } from 'lucide-react';
-
-const MOCK_REVIEWS = [
-    {
-        id: 1,
-        userName: 'Ana Costa',
-        userInitials: 'AC',
-        time: 'Há 2 dias',
-        rating: 5,
-        text: 'Uma obra-prima absoluta! A transição entre as faixas é perfeita e a produção está em outro nível. Não consigo parar de ouvir.',
-        likes: 34,
-        comments: [
-            { id: 101, userName: 'Lucas Mendes', userInitials: 'LM', time: 'Há 1 dia', text: 'Concordo! A faixa 3 é surreal de boa.', likes: 5 },
-            { id: 102, userName: 'Sofia', userInitials: 'S', time: 'Há 5 horas', text: 'Eu achei a segunda metade do disco meio arrastada, mas no geral é bom.', likes: 1 }
-        ]
-    },
-    {
-        id: 2,
-        userName: 'Marcos Vinícius',
-        userInitials: 'MV',
-        time: 'Há 5 dias',
-        rating: 4,
-        text: 'Muito sólido. O artista tentou coisas novas e a maioria funcionou. Algumas letras parecem um pouco apressadas, mas o instrumental compensa.',
-        likes: 12,
-        comments: []
-    },
-    {
-        id: 3,
-        userName: 'Julia Ferreira',
-        userInitials: 'JF',
-        time: 'Há 1 semana',
-        rating: 4.5,
-        text: 'Cresceu muito em mim. Na primeira audição não gostei tanto, mas agora não tiro do repeat!',
-        likes: 89,
-        comments: [
-            { id: 103, userName: 'Pedro H.', userInitials: 'PH', time: 'Há 2 dias', text: 'Aconteceu exatamente o mesmo comigo haha', likes: 12 }
-        ]
-    }
-];
+import { Heart, Plus, Star, StarHalf, MessageCircle, MoreHorizontal, X, Send } from 'lucide-react';
 
 export default function Album() {
     const { id } = useParams();
     const navigate = useNavigate();
     
+    // --- ESTADOS ---
     const [album, setAlbum] = useState(null);
-    const [artistPhoto, setArtistPhoto] = useState(null); // Estado para a foto do artista
+    const [reviews, setReviews] = useState([]);
+    const [artistPhoto, setArtistPhoto] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
 
-    useEffect(() => {
-        // 1. Busca os álbuns
-        fetch('http://localhost:5000/api/albuns')
+    // Estados para Postar Review (Modal)
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [newReviewRating, setNewReviewRating] = useState(0); 
+    const [hoverRating, setHoverRating] = useState(0); 
+    const [newReviewText, setNewReviewText] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    // Estados para Responder Review
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [replyText, setReplyText] = useState("");
+
+    // Usuário
+    const savedUser = JSON.parse(localStorage.getItem('user'));
+    const currentUserId = savedUser ? savedUser.id_user : 1;
+    const currentUserName = savedUser ? (savedUser.username || savedUser.nome) : "Visitante";
+
+    // --- BUSCA DE DADOS ---
+    const fetchAlbumData = () => {
+        fetch(`http://localhost:5000/api/albuns/${id}`)
             .then(res => res.json())
             .then(data => {
-                const found = data.find(a => a.id_album === parseInt(id));
-                
-                if (found) {
-                    // Normaliza os dados do álbum
-                    const artistName = found.nome_artista || found.artist || "Artista Desconhecido";
-                    
-                    setAlbum({
-                        id: found.id_album,
-                        title: found.title,
-                        artist: artistName,
-                        image: found.image,
-                        year: found.year,
-                        genre: found.genre,
-                        description: found.description || "Sem descrição disponível para este álbum.",
-                        rating: 4.5
-                    });
+                if (data.error) return;
 
-                    // 2. Busca a foto do artista (endpoint de busca)
-                    fetch(`http://localhost:5000/api/busca?q=${encodeURIComponent(artistName)}`)
-                        .then(res => res.json())
-                        .then(searchData => {
-                            // Encontra o artista exato na lista de resultados
-                            const foundArtist = searchData.artistas.find(
-                                a => a.name.toLowerCase() === artistName.toLowerCase()
-                            );
-                            if (foundArtist && foundArtist.image_url) {
-                                setArtistPhoto(foundArtist.image_url);
-                            }
-                        })
-                        .catch(err => console.error("Erro ao buscar foto do artista:", err));
-                }
+                const alb = data.album;
+                // Garante que temos um nome de artista
+                const artistName = alb.nome_artista || alb.artist || "Desconhecido";
+
+                setAlbum({
+                    ...alb,
+                    artist: artistName,
+                    rating: data.nota_media || 0
+                });
+                
+                setReviews(data.reviews || []);
+
+                // Busca foto do artista usando o nome encontrado
+                fetch(`http://localhost:5000/api/busca?q=${encodeURIComponent(artistName)}`)
+                    .then(r => r.json())
+                    .then(searchData => {
+                        const found = searchData.artistas.find(a => a.name.toLowerCase() === artistName.toLowerCase());
+                        if (found && found.image_url) {
+                            setArtistPhoto(found.image_url);
+                        }
+                    })
+                    .catch(e => console.log("Erro foto artista:", e));
+
                 setLoading(false);
             })
             .catch(err => {
-                console.error("Erro ao carregar álbum:", err);
+                console.error("Erro de conexão:", err);
                 setLoading(false);
             });
+    };
+
+    useEffect(() => {
+        fetchAlbumData();
     }, [id]);
 
-    const renderStars = (rating, size = 16) => {
+    // --- LÓGICA DAS ESTRELAS INTERATIVAS ---
+    const handleMouseMoveStar = (e, index) => {
+        const { left, width } = e.currentTarget.getBoundingClientRect();
+        const percent = (e.clientX - left) / width;
+        const value = percent <= 0.5 ? index - 0.5 : index;
+        setHoverRating(value);
+    };
+
+    // --- AÇÕES ---
+    const handlePostReview = () => {
+        if (newReviewRating === 0) return alert("Por favor, dê uma nota.");
+        
+        setSubmitting(true);
+        fetch('http://localhost:5000/api/reviews', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id_user: currentUserId,
+                id_album: id,
+                nota: newReviewRating,
+                texto: newReviewText
+            })
+        })
+        .then(res => res.json())
+        .then(() => {
+            setSubmitting(false);
+            setShowReviewModal(false);
+            setNewReviewText("");
+            setNewReviewRating(0);
+            fetchAlbumData(); 
+        })
+        .catch(() => setSubmitting(false));
+    };
+
+    const handleLikeReview = (reviewId) => {
+        fetch(`http://localhost:5000/api/reviews/${reviewId}/curtir`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_user: currentUserId, username: currentUserName })
+        }).then(() => fetchAlbumData());
+    };
+
+    const handlePostReply = (reviewId) => {
+        if (!replyText.trim()) return;
+        fetch(`http://localhost:5000/api/reviews/${reviewId}/responder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_user: currentUserId, username: currentUserName, texto: replyText })
+        }).then(() => {
+            setReplyText("");
+            setReplyingTo(null);
+            fetchAlbumData();
+        });
+    };
+
+    // Renderiza estrelas estáticas (exibição)
+    const renderStars = (val, size = 16) => {
         const stars = [];
-        const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 >= 0.4;
-
-        for (let i = 0; i < fullStars; i++) stars.push(<Star key={`f-${i}`} size={size} fill="#facc15" color="#facc15" />);
-        if (hasHalfStar) stars.push(<StarHalf key="h" size={size} fill="#facc15" color="#facc15" />);
-
-        const currentCount = stars.length;
-        for (let i = 0; i < (5 - currentCount); i++) stars.push(<Star key={`e-${i}`} size={size} color="#1f2937" fill="rgba(31, 41, 55, 0.5)" />);
-
+        const fullStars = Math.floor(val);
+        const hasHalf = val % 1 >= 0.4; 
+        for (let i = 1; i <= 5; i++) {
+            if (i <= fullStars) stars.push(<Star key={i} size={size} fill="#facc15" color="#facc15" />);
+            else if (i === fullStars + 1 && hasHalf) stars.push(<StarHalf key={i} size={size} fill="#facc15" color="#facc15" />);
+            else stars.push(<Star key={i} size={size} color="#2a2a2cff" fill="rgba(52, 53, 54, 0.3)" />);
+        }
         return stars;
     };
 
-    if (loading) {
-        return (
-            <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', flexDirection: 'column' }}>
-                <Header hideNav={true} hideSearch={true} />
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <h2 style={{ color: '#9ca3af' }}>Carregando dados do álbum...</h2>
-                </div>
-            </div>
-        );
-    }
-
-    if (!album) {
-        return (
-            <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', flexDirection: 'column' }}>
-                <Header hideNav={true} hideSearch={true} />
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                    <h2 style={{ fontSize: '24px' }}>Álbum não encontrado</h2>
-                    <button onClick={() => navigate('/')} style={{ padding: '10px 20px', borderRadius: '99px', border: '1px solid white', background: 'transparent', color: 'white', cursor: 'pointer' }}>
-                        Voltar para o Início
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    if (loading) return <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando...</div>;
+    if (!album) return null;
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', paddingBottom: '80px' }}>
             <Header hideNav={true} hideSearch={true} />
 
-            {/* FUNDO GLASSMORPHISM */}
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '80vh', 
-                    backgroundImage: `url(${album.image})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    backgroundRepeat: 'no-repeat',
-                    // Filtros para o efeito de vidro fosco escuro
-                    filter: 'blur(80px) brightness(0.4) saturate(1.5)', 
-                    zIndex: 0,
-                    pointerEvents: 'none',
-                    // Máscara para suavizar a transição para o preto
-                    maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)'
-                }}
-            />
+            {/* Fundo Glass */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80vh', backgroundImage: `url(${album.image})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(80px) brightness(0.4) saturate(1.5)', zIndex: 0, pointerEvents: 'none', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)' }} />
 
-            <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 24px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '80px' }}>
-
+            <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '64px 24px', position: 'relative', zIndex: 10 }}>
+                
                 {/* === HEADER DO ÁLBUM === */}
-                <section style={{ display: 'flex', gap: '80px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    {/* Capa */}
-                    <div
-                        style={{
-                            width: '340px',
-                            height: '340px',
-                            flexShrink: 0,
-                            borderRadius: '24px',
-                            boxShadow: '0 30px 60px -15px rgba(0,0,0,0.9)',
-                            overflow: 'hidden',
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            backgroundColor: '#1f1f22'
-                        }}
-                    >
-                        <img 
-                            src={album.image} 
-                            alt={album.title} 
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentNode.style.display = 'flex';
-                                e.target.parentNode.style.alignItems = 'center';
-                                e.target.parentNode.style.justifyContent = 'center';
-                                e.target.parentNode.innerText = 'Sem Capa';
-                                e.target.parentNode.style.color = '#555';
-                            }}
-                        />
+                <section style={{ display: 'flex', gap: '60px', alignItems: 'flex-end', marginBottom: '80px', flexWrap: 'wrap' }}>
+                    <div style={{ width: '340px', height: '340px', flexShrink: 0, borderRadius: '24px', boxShadow: '0 30px 60px -15px rgba(0,0,0,0.9)', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.05)', backgroundColor: '#1f1f22' }}>
+                        <img src={album.image} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.style.display = 'flex'; e.target.parentNode.style.alignItems = 'center'; e.target.parentNode.style.justifyContent = 'center'; e.target.parentNode.innerText = 'Sem Capa'; }} />
                     </div>
 
-                    {/* Informações */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
-
-                        <div>
-                            <span style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#fff27bff', marginBottom: '8px', display: 'block' }}>
-                                {album.genre}
-                            </span>
-                            <h1 style={{ fontSize: '72px', fontWeight: '900', margin: 0, lineHeight: '1.05', letterSpacing: '-0.04em', textShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
-                                {album.title}
-                            </h1>
-                        </div>
-
-                        {/* Ícone do Artista*/}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ flex: 1 }}>
+                        <span style={{ color: '#3b82f6', fontWeight: 'bold', letterSpacing: '0.1em', fontSize: '14px', textTransform: 'uppercase' }}>{album.genre}</span>
+                        <h1 style={{ fontSize: '72px', fontWeight: '900', margin: '8px 0', lineHeight: '1' }}>{album.title}</h1>
+                        
+                        {/* Artista */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '24px 0' }}>
                             <div 
                                 onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
-                                style={{ 
-                                    width: '40px', 
-                                    height: '40px', 
-                                    borderRadius: '50%', 
-                                    overflow: 'hidden',
-                                    background: artistPhoto ? 'transparent' : 'linear-gradient(135deg, #3be7e7ff, #e770ffff)', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
-                                    fontWeight: 'bold', 
-                                    fontSize: '18px', 
-                                    color: '#121215',
-                                    cursor: 'pointer',
-                                }}
+                                style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', background: artistPhoto ? 'transparent' : 'linear-gradient(135deg, #3be7e7ff, #e770ffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', color: '#121215', cursor: 'pointer', border: '2px solid rgba(255,255,255,0.1)' }}
                             >
-                                {artistPhoto ? (
-                                    <img 
-                                        src={artistPhoto} 
-                                        alt={album.artist} 
-                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                                    />
-                                ) : (
-                                    album.artist.charAt(0)
-                                )}
+                                {artistPhoto ? 
+                                    <img src={artistPhoto} alt={album.artist} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> 
+                                    : album.artist.charAt(0)
+                                }
                             </div>
                             
-                            <span
-                                onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
-                                onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                                onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
-                                style={{
-                                    fontSize: '24px',
-                                    fontWeight: '600',
-                                    color: 'rgba(255,255,255,0.9)',
-                                    cursor: 'pointer',
-                                    transition: 'color 0.2s'
-                                }}
-                            >
+                            <span onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)} style={{ fontSize: '24px', fontWeight: '600', color: 'rgba(255,255,255,0.95)', cursor: 'pointer', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                                 {album.artist}
                             </span>
-                            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '20px' }}>•</span>
-                            <span style={{ color: '#9ca3af', fontSize: '20px', fontWeight: '500' }}>{album.year}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '20px' }}>•</span>
+                            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '20px', fontWeight: '500' }}>{album.year}</span>
                         </div>
 
-                        <p style={{ fontSize: '16px', color: '#d1d5db', lineHeight: '1.6', maxWidth: '600px', margin: 0 }}>
-                            {album.description}
-                        </p>
+                        <p style={{ fontSize: '16px', color: '#d1d5db', lineHeight: '1.6', maxWidth: '600px', margin: 0, textShadow: '0 1px 2px rgba(0,0,0,0.8)' }}>{album.description}</p>
 
-                        {/* Balão de Nota + Botão de Favoritar */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginTop: '16px', flexWrap: 'wrap' }}>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 24px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-                            }}>
+                        {/* Nota e Botões */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginTop: '32px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 24px', backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px' }}>
                                 <div style={{ display: 'flex', gap: '6px' }}>{renderStars(album.rating, 22)}</div>
-                                <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                                    <span style={{ fontSize: '28px', fontWeight: '900', color: 'white', lineHeight: '1' }}>{album.rating}</span>
-                                    <span style={{ fontSize: '14px', color: '#9ca3af', fontWeight: '500' }}>/ 5</span>
-                                </div>
+                                <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                                <span style={{ fontSize: '28px', fontWeight: '900', color: 'white' }}>{album.rating}</span>
                             </div>
 
-                            <button
-                                onClick={() => setIsFavorite(!isFavorite)}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 32px', borderRadius: '24px',
-                                    backgroundColor: isFavorite ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                                    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                                    border: isFavorite ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
-                                    color: isFavorite ? '#ef4444' : 'white', fontWeight: '600', fontSize: '16px',
-                                    cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
-                                }}
-                                onMouseEnter={e => {
-                                    e.currentTarget.style.backgroundColor = isFavorite ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.08)';
-                                    e.currentTarget.style.transform = 'translateY(-2px)'
-                                }}
-                                onMouseLeave={e => {
-                                    e.currentTarget.style.backgroundColor = isFavorite ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.03)';
-                                    e.currentTarget.style.transform = 'translateY(0)'
-                                }}
-                            >
-                                <Heart size={22} fill={isFavorite ? "#ef4444" : "none"} color={isFavorite ? "#ef4444" : "currentColor"} />
-                                {isFavorite ? 'Favoritado' : 'Favoritar'}
+                            <button onClick={() => setIsFavorite(!isFavorite)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 32px', borderRadius: '24px', backgroundColor: isFavorite ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.1)', border: isFavorite ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)', color: isFavorite ? '#ef4444' : 'white', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s', backdropFilter: 'blur(20px)' }}>
+                                <Heart size={22} fill={isFavorite ? "#ef4444" : "none"} /> {isFavorite ? 'Salvo' : 'Salvar'}
                             </button>
                         </div>
                     </div>
                 </section>
 
-                <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.05)' }} />
+                <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
 
-                {/* === SEÇÃO DE REVIEWS === */}
-                <section>
+                {/* === REVIEWS === */}
+                <section style={{ marginTop: '40px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                        <h2 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0, letterSpacing: '-0.02em' }}>Avaliações da Comunidade</h2>
-                        <button style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '9999px', backgroundColor: 'white', border: 'none', color: '#121215', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', transition: 'transform 0.2s', boxShadow: '0 4px 12px rgba(255,255,255,0.1)' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                            <Plus size={18} /> Escrever Review
+                        <h2 style={{ fontSize: '28px', fontWeight: 'bold' }}>Reviews da Comunidade ({reviews.length})</h2>
+                        <button onClick={() => setShowReviewModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '99px', backgroundColor: 'white', border: 'none', color: '#121215', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                            <Plus size={18} /> Avaliar Álbum
                         </button>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                        {MOCK_REVIEWS.map((review, index) => (
-                            <React.Fragment key={review.id}>
+                        {reviews.length === 0 && <p style={{ color: '#6b7280', fontSize: '18px' }}>Seja o primeiro a avaliar este álbum!</p>}
+
+                        {reviews.map((review, index) => (
+                            <div key={review._id}>
                                 <div style={{ display: 'flex', gap: '20px' }}>
-                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(to bottom right, #2dd4bf, #0d9488)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '16px', flexShrink: 0 }}>
-                                        {review.userInitials}
+                                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#27272a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '16px', flexShrink: 0, color: '#a1a1aa' }}>
+                                        {review.username ? review.username.charAt(0).toUpperCase() : '?'}
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                                             <div>
-                                                <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{review.userName}</div>
-                                                <div style={{ color: '#9ca3af', fontSize: '13px', marginTop: '2px' }}>{review.time}</div>
+                                                <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{review.username}</div>
+                                                <div style={{ color: '#71717a', fontSize: '13px' }}>{review.data_postagem}</div>
                                             </div>
-                                            <button style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}><MoreHorizontal size={20} /></button>
+                                            <MoreHorizontal size={20} color="#52525b" style={{ cursor: 'pointer' }} />
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>{renderStars(review.rating, 16)}</div>
-                                        <p style={{ margin: 0, fontSize: '15px', lineHeight: '1.6', color: '#e5e7eb' }}>{review.text}</p>
+                                        <div style={{ display: 'flex', gap: '4px', marginBottom: '12px' }}>{renderStars(review.nota, 14)}</div>
+                                        <p style={{ margin: 0, fontSize: '15px', lineHeight: '1.6', color: '#e4e4e7' }}>{review.texto}</p>
+                                        
                                         <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
-                                            <ActionButton icon={<Heart size={16} />} label={review.likes} />
-                                            <ActionButton icon={<MessageCircle size={16} />} label={review.comments.length > 0 ? review.comments.length : 'Responder'} />
+                                            <ActionButton 
+                                                icon={<Heart size={16} fill={review.curtidas?.includes(currentUserId) ? "#ef4444" : "none"} color={review.curtidas?.includes(currentUserId) ? "#ef4444" : "#9ca3af"} />} 
+                                                label={review.curtidas?.length || 0} 
+                                                onClick={() => handleLikeReview(review._id)}
+                                            />
+                                            <ActionButton 
+                                                icon={<MessageCircle size={16} />} 
+                                                label={review.respostas?.length > 0 ? review.respostas.length : 'Responder'} 
+                                                onClick={() => setReplyingTo(replyingTo === review._id ? null : review._id)}
+                                            />
                                         </div>
-                                        {review.comments.length > 0 && (
+
+                                        {replyingTo === review._id && (
+                                            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', animation: 'fadeIn 0.3s ease' }}>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Escreva sua resposta..." 
+                                                    value={replyText}
+                                                    onChange={(e) => setReplyText(e.target.value)}
+                                                    style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 16px', color: 'white', outline: 'none' }}
+                                                />
+                                                <button onClick={() => handlePostReply(review._id)} style={{ background: '#3b82f6', border: 'none', borderRadius: '12px', padding: '0 16px', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}>
+                                                    Enviar
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {review.respostas?.length > 0 && (
                                             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px', paddingLeft: '20px', borderLeft: '2px solid rgba(255,255,255,0.05)' }}>
-                                                {review.comments.map(comment => (
-                                                    <div key={comment.id} style={{ display: 'flex', gap: '16px' }}>
-                                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(to bottom right, #818cf8, #4f46e5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '12px', flexShrink: 0 }}>
-                                                            {comment.userInitials}
+                                                {review.respostas.map((resp, idx) => (
+                                                    <div key={idx} style={{ display: 'flex', gap: '16px' }}>
+                                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#3f3f46', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '12px', color: '#d4d4d8' }}>
+                                                            {resp.username ? resp.username.charAt(0).toUpperCase() : '?'}
                                                         </div>
-                                                        <div style={{ flex: 1 }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{comment.userName}</span>
-                                                                <span style={{ color: '#6b7280', fontSize: '12px' }}>{comment.time}</span>
+                                                        <div>
+                                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                                <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{resp.username}</span>
+                                                                <span style={{ color: '#71717a', fontSize: '12px' }}>{resp.data}</span>
                                                             </div>
-                                                            <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: '#d1d5db' }}>{comment.text}</p>
-                                                            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                                                                <ActionButton icon={<Heart size={14} />} label={comment.likes} small />
-                                                                <ActionButton icon={<CornerDownRight size={14} />} label="Responder" small />
-                                                            </div>
+                                                            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#d4d4d8' }}>{resp.texto}</p>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -352,23 +277,107 @@ export default function Album() {
                                         )}
                                     </div>
                                 </div>
-                                {index < MOCK_REVIEWS.length - 1 && (
-                                    <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.05)' }} />
-                                )}
-                            </React.Fragment>
+                                {index < reviews.length - 1 && <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.05)', marginTop: '32px' }} />}
+                            </div>
                         ))}
                     </div>
                 </section>
-
             </main>
+
+            {/* === NOVO MODAL MODERNO === */}
+            {showReviewModal && (
+                <div style={{ 
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)',
+                    animation: 'fadeIn 0.2s ease-out'
+                }}>
+                    <div style={{ 
+                        background: '#18181b', padding: '40px', borderRadius: '32px', width: '500px', 
+                        border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 40px 80px -20px rgba(0,0,0,0.8)',
+                        display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative'
+                    }}>
+                        <button onClick={() => setShowReviewModal(false)} style={{ position: 'absolute', top: '24px', right: '24px', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', color: '#a1a1aa', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18}/></button>
+                        
+                        <div style={{ textAlign: 'center' }}>
+                            <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 'bold' }}>Avaliar Álbum</h2>
+                            <p style={{ margin: 0, color: '#a1a1aa', fontSize: '14px' }}>O que você achou de <span style={{color: 'white'}}>{album.title}</span>?</p>
+                        </div>
+
+                        {/* Estrelas Interativas Modernas */}
+                        <div 
+                            style={{ display: 'flex', gap: '8px', justifyContent: 'center', padding: '16px 0' }}
+                            onMouseLeave={() => setHoverRating(0)}
+                        >
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <div 
+                                    key={star} 
+                                    onMouseMove={(e) => handleMouseMoveStar(e, star)}
+                                    onClick={() => setNewReviewRating(hoverRating || star)}
+                                    style={{ cursor: 'pointer', position: 'relative', width: '40px', height: '40px' }}
+                                >
+                                    {/* Estrela Vazia (Fundo) */}
+                                    <Star size={40} color="#3f3f46" strokeWidth={1.5} style={{ position: 'absolute', top: 0, left: 0 }} />
+                                    
+                                    {/* Estrela Cheia (Overlay baseada no hover/select) */}
+                                    <div style={{ 
+                                        position: 'absolute', top: 0, left: 0, overflow: 'hidden', pointerEvents: 'none',
+                                        width: (hoverRating || newReviewRating) >= star ? '100%' : 
+                                               (hoverRating || newReviewRating) >= star - 0.5 ? '50%' : '0%' 
+                                    }}>
+                                        <Star size={40} fill="#fbbf24" color="#fbbf24" strokeWidth={0} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ textAlign: 'center', color: '#fbbf24', fontWeight: 'bold', fontSize: '18px', height: '20px' }}>
+                            {(hoverRating || newReviewRating) > 0 ? (hoverRating || newReviewRating) : ''}
+                        </div>
+
+                        <textarea 
+                            placeholder="Escreva sua opinião..."
+                            value={newReviewText}
+                            onChange={(e) => setNewReviewText(e.target.value)}
+                            style={{ 
+                                width: '100%', height: '140px', background: '#27272a', border: '1px solid transparent', 
+                                borderRadius: '16px', padding: '20px', color: 'white', fontSize: '15px', resize: 'none', 
+                                outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s',
+                                fontFamily: 'inherit'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                            onBlur={(e) => e.target.style.borderColor = 'transparent'}
+                        />
+
+                        <button 
+                            onClick={handlePostReview} 
+                            disabled={submitting}
+                            style={{ 
+                                width: '100%', padding: '16px', borderRadius: '99px', 
+                                background: 'white', color: 'black', border: 'none', 
+                                fontWeight: 'bold', fontSize: '16px', cursor: submitting ? 'wait' : 'pointer', 
+                                opacity: submitting ? 0.7 : 1, transition: 'transform 0.1s'
+                            }}
+                            onMouseDown={e => !submitting && (e.currentTarget.style.transform = 'scale(0.98)')}
+                            onMouseUp={e => !submitting && (e.currentTarget.style.transform = 'scale(1)')}
+                        >
+                            {submitting ? 'Publicando...' : 'Publicar Avaliação'}
+                        </button>
+                    </div>
+                </div>
+            )}
+            
+            {/* Estilo para animação simples */}
+            <style>{`
+                @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+            `}</style>
         </div>
     );
 }
 
-function ActionButton({ icon, label, small = false }) {
+function ActionButton({ icon, label, small = false, onClick }) {
     const [hover, setHover] = useState(false);
     return (
         <button
+            onClick={onClick}
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{

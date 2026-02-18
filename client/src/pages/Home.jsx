@@ -59,7 +59,7 @@ export default function Home({ user, onLogout }) {
       title: 'Descubra um novo jeito de curtir música.',
       desc: 'Avalie, compartilhe e descubra o que seus amigos estão ouvindo em tempo real.',
       btnText: 'Começar a Avaliar',
-      path: '/',
+      path: '/profile',
     },
     {
       id: 2,

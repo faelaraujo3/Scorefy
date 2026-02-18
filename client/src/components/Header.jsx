@@ -196,7 +196,21 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
               overflow: 'hidden'
             }}
           >
-            <User size={16} color="white" />
+            <svg 
+              width="20" 
+              height="20" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                fill="white" 
+                d="M12,11A4,4,0,1,0,8,7,4,4,0,0,0,12,11Z"
+              />
+              <path 
+                fill="white" 
+                d="M18,21a1,1,0,0,0,1-1A7,7,0,0,0,5,20a1,1,0,0,0,1,1Z"
+              />
+            </svg>
           </div>
         </div>
       </div>

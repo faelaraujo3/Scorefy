@@ -79,7 +79,21 @@ export default function Profile() {
             {/* Avatar Grande */}
             <div style={{ width: '140px', height: '140px', borderRadius: '50%', background: 'linear-gradient(to top right, #3be7e7ff, #e770ffff)', padding: '4px', flexShrink: 0 }}>
               <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#121215', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <User size={64} color="white" />
+                <svg 
+              width="100" 
+              height="100" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                fill="white" 
+                d="M12,11A4,4,0,1,0,8,7,4,4,0,0,0,12,11Z"
+              />
+              <path 
+                fill="white" 
+                d="M18,21a1,1,0,0,0,1-1A7,7,0,0,0,5,20a1,1,0,0,0,1,1Z"
+              />
+            </svg>
               </div>
             </div>
 

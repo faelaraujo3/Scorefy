@@ -516,12 +516,12 @@ db.albums.insert_many([
 # 4. Povoamento de Usuário (Apenas para o Rafael testar o Profile)
 db.users.insert_one({
     "email": "emerson@ufop.br",
-    "password": "123",
+    "senha": "123",
     "username": "EmersonS2",
-    "name": "Emerson Ataide",
+    "nome": "Emerson Ataide",
     "bio": "Estudante de SI na UFOP",
-    "location": "Joao Monlevade MG",
-    "favorite_albums": [1, 43]
+    "localizacao": "Joao Monlevade MG",
+    "albuns_favoritos": [1, 43]
 })
 
 print("Banco resetado e povoado com sucesso!")

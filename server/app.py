@@ -6,13 +6,12 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# Configuração do MongoDB
-# "localhost" para correres no teu terminal Debian, "mongodb" se fosses correr dentro do Docker
+# MongoDB
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 client = MongoClient(MONGO_URI)
 db = client["scorefy_db"]
 
-# Coleções (Nomes em português para as variáveis, mas batendo com o MongoDB em inglês)
+# Coleções
 usuarios_col = db["users"]
 artistas_col = db["artists"]
 albuns_col = db["albums"]

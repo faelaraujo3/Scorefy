@@ -85,27 +85,42 @@ def listar_albuns():
     ]
     return jsonify(list(albuns_col.aggregate(pipeline))), 200
 
-# --- SISTEMA DE REVIEWS (Sua Parte) ---
+# --- SISTEMA DE REVIEWS ---
 @app.route('/api/reviews', methods=['POST'])
 def postar_review():
     data = request.json
-    id_user = data.get('id_user')
+    
+    # Converte tudo para o tipo correto para evitar erro de String vs Int
+    try:
+        id_user = int(data.get('id_user'))
+        id_album = int(data.get('id_album'))
+        nota = float(data.get('nota'))
+    except (ValueError, TypeError):
+        return jsonify({"error": "Dados de ID ou Nota inválidos"}), 400
+
     usuario = usuarios_col.find_one({"id_user": id_user})
     if not usuario:
         return jsonify({"error": "Usuário não encontrado"}), 404
 
+    # A trava agora vai funcionar porque estamos comparando INT com INT
+    existente = criticas_col.find_one({"id_user": id_user, "id_album": id_album})
+    if existente:
+        return jsonify({"error": "Você já avaliou este álbum!"}), 400
+
     nova_review = {
         "id_user": id_user,
         "username": usuario.get('username') or usuario.get('nome'),
-        "id_album": int(data.get('id_album')),
-        "nota": float(data.get('nota')),
+        "id_album": id_album,
+        "nota": nota,
         "texto": data.get('texto'),
         "curtidas": [],
         "respostas": [],
         "data_postagem": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+    
     criticas_col.insert_one(nova_review)
     return jsonify({"message": "Review publicada!"}), 201
+
 
 @app.route('/api/albuns/<int:id_album>', methods=['GET'])
 def detalhes_album(id_album):

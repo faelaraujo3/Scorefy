@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoScorefy from '../assets/logoscorefy.png';
 import { ArrowRight, Lock, Mail } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,9 +25,9 @@ export default function Login({ onLogin }) {
       const data = await response.json();
 
       if (response.ok) {
-        // Sucesso: Chama a função do App.jsx para atualizar o estado global
-        onLogin(data.user);
-        navigate('/'); // Redireciona para a home
+        login(data.user); 
+        
+        navigate('/'); 
       } else {
         setError(data.error || 'Erro ao fazer login');
       }

@@ -174,7 +174,35 @@ db.artists.insert_many([
         "country": "EUA",
         "formed_year": 2001,
         "image_url": "https://link-da-imagem.jpg"
+    },
+    {
+        "id_artista": 19,
+        "name": "Olivia Rodrigo",
+        "bio": "Cantora e compositora americana conhecida por musicas emocionais e letras pessoais",
+        "genre": "Pop",
+        "country": "EUA",
+        "formed_year": 2015,
+        "image_url": "https://link-da-imagem.jpg"
+    },
+    {
+        "id_artista": 20,
+        "name": "Lil Nas X",
+        "bio": "Cantor americano conhecido por musicas inovadoras e letras provocativas",
+        "genre": "Pop",
+        "country": "EUA",
+        "formed_year": 2018,
+        "image_url": "https://link-da-imagem.jpg"
+    },
+    {
+        "id_artista": 21,
+        "name": "Harry Styles",
+        "bio": "Cantor britanico conhecido por carreira solo e estilo pop rock",
+        "genre": "Pop",
+        "country": "Reino Unido",
+        "formed_year": 2017,
+        "image_url": "https://link-da-imagem.jpg"
     }
+
 ])
 
 
@@ -570,7 +598,58 @@ db.albums.insert_many([
         "genre": "Indie Rock",
         "description": "Album com grande sucesso comercial da banda",
         "image": "https://link-da-imagem.jpg"
+    },
+
+    {
+        "id_album": 40,
+        "title": "Montero",
+        "id_artista": 20,
+        "year": 2021,
+        "genre": "Pop",
+        "description": "Album de estreia que consolidou Lil Nas X no cenario pop e rap mundial",
+        "image": "https://link-da-imagem.jpg"
+    },
+
+    {
+        "id_album": 41,
+        "title": "SOUR",
+        "id_artista": 19,
+        "year": 2021,
+        "genre": "Pop Rock",
+        "description": "Album de estreia com forte carga emocional e sucesso global",
+        "image": "https://link-da-imagem.jpg"
+    },
+
+    {
+        "id_album": 42,
+        "title": "The Life of a Showgirl",
+        "id_artista": 3,
+        "year": 2025,
+        "genre": "Pop",
+        "description": "Projeto que explora o lado performatico e teatral de Taylor Swift",
+        "image": "https://link-da-imagem.jpg"
+    },
+
+    {
+        "id_album": 43,
+        "title": "Harrys House",
+        "id_artista": 21,
+        "year": 2022,
+        "genre": "Pop",
+        "description": "Album com sonoridade leve e influencias do pop contemporaneo",
+        "image": "https://link-da-imagem.jpg"
+    },
+
+    {
+        "id_album": 44,
+        "title": "MAYHEM",
+        "id_artista": 10,
+        "year": 2025,
+        "genre": "Pop",
+        "description": "Album com estetica ousada e sonoridade intensa caracteristica de Lady Gaga",
+        "image": "https://link-da-imagem.jpg"
     }
+
 
 ])
 

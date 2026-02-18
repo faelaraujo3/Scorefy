@@ -103,7 +103,7 @@ def postar_review():
         "texto": data.get('texto'),
         "curtidas": [],
         "respostas": [],
-        "data_postagem": datetime.now().strftime("%d/%m/%Y %H:%M")
+        "data_postagem": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     criticas_col.insert_one(nova_review)
     return jsonify({"message": "Review publicada!"}), 201
@@ -157,54 +157,72 @@ def obter_notificacoes(id_user):
     for a in avisos: a['_id'] = str(a['_id'])
     return jsonify(avisos), 200
 
-# --- SEÇÕES DA HOME (Lógica Completa com Ajustes) ---
+# --- SEÇÕES DA HOME ---
 def buscar_detalhes_album(lista_agregada):
+    if not lista_agregada:
+        return []
+    
     ids = [item["_id"] for item in lista_agregada]
     albuns = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
+    albuns.sort(key=lambda x: ids.index(x["id_album"]))
     for alb in albuns:
         art = artistas_col.find_one({"id_artista": alb["id_artista"]})
         alb["artist"] = art["name"] if art else "Desconhecido"
+        if "rating" not in alb:
+             alb["rating"] = 4.5 
+
     return albuns
 
 @app.route('/api/home/secoes', methods=['GET'])
 def obter_secoes_home():
-    # 1. Melhores Avaliações (campo 'nota')
+    # 1. Melhores Avaliações
     pipeline_top = [
         {"$group": {"_id": "$id_album", "media": {"$avg": "$nota"}, "total": {"$sum": 1}}},
-        {"$sort": {"media": -1, "total": -1}}, {"$limit": 8}
+        {"$sort": {"media": -1, "total": -1}},
+        {"$limit": 8}
     ]
-    melhores_ids = list(criticas_col.aggregate(pipeline_top))
+    melhores_agregados = list(criticas_col.aggregate(pipeline_top))
     
     # 2. Em Alta (Última semana)
-    uma_semana = (datetime.now() - timedelta(days=7)).strftime("%d/%m/%Y %H:%M")
+    uma_semana = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+    
     pipeline_trending = [
+        # Nota: Isso só funcionará 100% se a data for salva como YYYY-MM-DD
         {"$match": {"data_postagem": {"$gte": uma_semana}}},
         {"$group": {"_id": "$id_album", "contagem": {"$sum": 1}}},
-        {"$sort": {"contagem": -1}}, {"$limit": 8}
+        {"$sort": {"contagem": -1}},
+        {"$limit": 8}
     ]
-    trending_ids = list(criticas_col.aggregate(pipeline_trending))
+    trending_agregados = list(criticas_col.aggregate(pipeline_trending))
 
-    # Função auxiliar para buscar detalhes dos álbuns com Info do Artista
-    def buscar_detalhes(lista_agregada):
-        ids = [item["_id"] for item in lista_agregada]
-        albuns = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
-        for alubm in albuns:
-            art = artistas_col.find_one({"id_artista": alubm["id_artista"]})
-            alubm["artist"] = art["name"] if art else "Desconhecido"
-        return albuns
-
-    # 3. NOVOS LANÇAMENTOS (Pelo campo 'year' do álbum)
+    # 3. Novos Lançamentos
     novos_lancamentos = list(albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(8))
     for nl in novos_lancamentos:
         art = artistas_col.find_one({"id_artista": nl["id_artista"]})
         nl["artist"] = art["name"] if art else "Desconhecido"
+        nl["rating"] = 0
+
+    lista_trending = buscar_detalhes_album(trending_agregados)
+    if not lista_trending:
+        # Pega 8 aleatórios ou os primeiros 8 para não repetir 'novos'
+        lista_trending = list(albuns_col.find({}, {"_id": 0}).limit(8))
+        for x in lista_trending:
+             art = artistas_col.find_one({"id_artista": x["id_artista"]})
+             x["artist"] = art["name"] if art else "Desconhecido"
+
+    lista_top = buscar_detalhes_album(melhores_agregados)
+    if not lista_top:
+        # Pega 8 pulando os primeiros para variar
+        lista_top = list(albuns_col.find({}, {"_id": 0}).skip(8).limit(8))
+        for x in lista_top:
+             art = artistas_col.find_one({"id_artista": x["id_artista"]})
+             x["artist"] = art["name"] if art else "Desconhecido"
 
     return jsonify({
-        "trending": buscar_detalhes_album(trending_ids) if trending_ids else novos_lancamentos,
-        "top_rated": buscar_detalhes_album(melhores_ids) if melhores_ids else novos_lancamentos,
+        "trending": lista_trending,
+        "top_rated": lista_top,
         "new_releases": novos_lancamentos
     })
-
 
 # Função auxiliar para formatar a resposta
 def formatar_albuns(lista_ids_ou_docs):

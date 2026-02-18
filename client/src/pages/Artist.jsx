@@ -102,8 +102,6 @@ export default function Artist() {
                   width: '200px', 
                   height: '200px', 
                   borderRadius: '50%', 
-                  background: '#121215',
-                  padding: '6px',
                   boxShadow: '0 20px 50px -10px rgba(0,0,0,0.5)', 
                   position: 'relative'
                 }}

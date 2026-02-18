@@ -2,141 +2,243 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import AlbumCard from '../components/AlbumCard';
-import { mockAlbums } from '../lib/mockAlbums';
-import { BadgeCheck, User, Disc, Star } from 'lucide-react';
+import { BadgeCheck, User, Disc, Star, MapPin, Music } from 'lucide-react';
 
 export default function Artist() {
   const { artistName } = useParams();
   const navigate = useNavigate();
   
-  const [artistAlbums, setArtistAlbums] = useState([]);
+  const [artist, setArtist] = useState(null);
+  const [albums, setAlbums] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [averageRating, setAverageRating] = useState(0);
 
-  // Decodifica o nome da URL (ex: "Billie%20Eilish" -> "Billie Eilish")
   const decodedName = decodeURIComponent(artistName);
 
   useEffect(() => {
-    // Filtra os álbuns que pertencem a este artista
-    const albums = mockAlbums.filter(a => a.artist.toLowerCase() === decodedName.toLowerCase());
-    setArtistAlbums(albums);
+    setLoading(true);
+    fetch(`http://localhost:5000/api/busca?q=${encodeURIComponent(decodedName)}`)
+      .then(res => res.json())
+      .then(data => {
+        const foundArtist = data.artistas.find(
+          a => a.name.toLowerCase() === decodedName.toLowerCase()
+        );
 
-    // Calcula a média de notas do artista 
-    if (albums.length > 0) {
-      const total = albums.reduce((acc, curr) => acc + curr.rating, 0);
-      setAverageRating((total / albums.length).toFixed(1));
-    }
+        if (foundArtist) {
+          setArtist(foundArtist);
+
+          const artistAlbumsRaw = data.albuns.filter(
+            a => a.id_artista === foundArtist.id_artista
+          );
+
+          const normalizedAlbums = artistAlbumsRaw.map(a => ({
+            id: a.id_album,
+            title: a.title,
+            artist: foundArtist.name,
+            image: a.image,
+            year: a.year,
+            genre: a.genre,
+            rating: 4.5 
+          }));
+
+          setAlbums(normalizedAlbums);
+
+          if (normalizedAlbums.length > 0) {
+            const total = normalizedAlbums.reduce((acc, curr) => acc + curr.rating, 0);
+            setAverageRating((total / normalizedAlbums.length).toFixed(1));
+          }
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Erro ao buscar artista:", err);
+        setLoading(false);
+      });
   }, [decodedName]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', paddingBottom: '80px', overflowX: 'hidden' }}>
       <Header />
 
-      {/* GRADIENTE FUNDO */}
+      {/* --- BACKGROUND --- */}
       <div 
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: '500px',
-          background: `radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, rgba(18, 18, 21, 1) 70%)`,
+          height: '80vh',
+          backgroundImage: artist?.image_url ? `url(${artist.image_url})` : 'none',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          filter: 'blur(80px) brightness(0.6) saturate(1.2)',
+          opacity: 0.5,
           zIndex: 0,
-          pointerEvents: 'none'
+          pointerEvents: 'none',
+          maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%)'
         }}
       />
+      
+      {!artist?.image_url && (
+        <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: '600px', zIndex: 0,
+            background: 'radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.2) 0%, rgba(18, 18, 21, 0) 70%)'
+        }} />
+      )}
 
-      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '64px 24px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '64px' }}>
+      <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '40px 24px', position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '48px' }}>
         
-        {/* === HEADER DO ARTISTA === */}
-        <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '24px' }}>
-          
-          {/* Avatar do Artista */}
-          <div 
-            style={{ 
-              width: '180px', 
-              height: '180px', 
-              borderRadius: '50%', 
-              background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative'
-            }}
-          >
-            <User size={64} color="rgba(255,255,255,0.2)" />
-          </div>
+        {loading ? (
+           <div style={{ textAlign: 'center', marginTop: '100px', color: '#9ca3af' }}>Carregando perfil...</div>
+        ) : artist ? (
+          <>
+            {/* === HEADER DO ARTISTA === */}
+            <section style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '32px' }}>
+              
+              {/* Avatar do Artista */}
+              <div 
+                style={{ 
+                  width: '200px', 
+                  height: '200px', 
+                  borderRadius: '50%', 
+                  background: '#121215',
+                  padding: '6px',
+                  boxShadow: '0 20px 50px -10px rgba(0,0,0,0.5)', 
+                  position: 'relative'
+                }}
+              >
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', position: 'relative', backgroundColor: '#1e293b' }}>
+                    {artist.image_url && artist.image_url.startsWith('http') ? (
+                    <img 
+                        src={artist.image_url} 
+                        alt={artist.name} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                    ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={64} color="rgba(255,255,255,0.2)" />
+                    </div>
+                    )}
+                </div>
+              </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <h1 style={{ fontSize: '56px', fontWeight: '900', margin: 0, letterSpacing: '-0.04em' }}>
-  {decodedName}
-</h1>
-<VerifiedBadge />
-            </div>
+              {/* Informações Textuais */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', maxWidth: '700px' }}>
+                
+                {/* Nome + Verificado */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
+                  <h1 style={{ fontSize: '64px', fontWeight: '900', margin: 0, letterSpacing: '-0.03em', lineHeight: '1' }}>
+                    {artist.name}
+                  </h1>
+                  <VerifiedBadge />
+                </div>
 
-            {/* Estatísticas */}
-            <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(10px)', borderRadius: '9999px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <Disc size={16} color="#9ca3af" />
-                <span style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>{artistAlbums.length} Lançamentos</span>
+                {/* Tags e Estatística */}
+                <div style={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: '12px', 
+                    justifyContent: 'center',
+                    marginTop: '4px' 
+                }}>
+                    {artist.genre && (
+                        <InfoPill icon={<Music size={14} />} text={artist.genre} color="#60a5fa" />
+                    )}
+                    {artist.country && (
+                        <InfoPill icon={<MapPin size={14} />} text={artist.country} />
+                    )}
+                    <InfoPill icon={<Disc size={14} />} text={`${albums.length} Álbuns`} />
+                    {albums.length > 0 && (
+                        <InfoPill icon={<Star size={14} fill="#facc15" color="#facc15" />} text={averageRating} />
+                    )}
+                </div>
+
+                {/* Bio */}
+                {artist.bio && (
+                  <p style={{ color: '#d1d5db', fontSize: '16px', lineHeight: '1.6', margin: '8px 0 0 0', opacity: 0.9 }}>
+                    {artist.bio}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* === DISCOGRAFIA === */}
+            <section style={{ marginTop: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '28px', fontWeight: 'bold', margin: 0 }}>Discografia</h2>
+                <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
               </div>
               
-              {artistAlbums.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', backgroundColor: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(10px)', borderRadius: '9999px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <Star size={16} color="#facc15" fill="#facc15" />
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: '#e5e7eb' }}>Média {averageRating}</span>
+              {albums.length > 0 ? (
+                <div 
+                  style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
+                    gap: '24px' 
+                  }}
+                >
+                  {albums.map(album => (
+                    <div 
+                      key={album.id} 
+                      onClick={() => navigate(`/album/${album.id}`)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <AlbumCard album={album} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: '60px', textAlign: 'center', color: '#9ca3af', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                  Nenhum álbum encontrado para este artista.
                 </div>
               )}
-            </div>
+            </section>
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', marginTop: '100px' }}>
+            <h2 style={{ fontSize: '32px', fontWeight: 'bold' }}>Artista não encontrado</h2>
+            <button onClick={() => navigate('/')} style={{ marginTop: '20px', padding: '12px 24px', borderRadius: '99px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: 'white', cursor: 'pointer' }}>
+                Voltar para o Início
+            </button>
           </div>
-        </section>
-
-        <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.05)' }} />
-
-        {/* === DISCOGRAFIA === */}
-        <section>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '32px' }}>Discografia</h2>
-          
-          {artistAlbums.length > 0 ? (
-            <div 
-              style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
-                gap: '24px' 
-              }}
-            >
-              {artistAlbums.map(album => (
-                <div 
-                  key={album.id} 
-                  onClick={() => navigate(`/album/${album.id}`)}
-                  style={{ cursor: 'pointer' }}
-                >
-
-                  <AlbumCard album={album} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ padding: '40px', textAlign: 'center', color: '#9ca3af', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed rgba(255,255,255,0.1)' }}>
-              Nenhum álbum encontrado para este artista no banco de dados.
-            </div>
-          )}
-        </section>
+        )}
 
       </main>
     </div>
   );
 }
 
+// Componente reutilizável para mostrar informações com ícones
+function InfoPill({ icon, text, color = '#e5e7eb' }) {
+    return (
+        <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '6px', 
+            padding: '6px 16px', 
+            backgroundColor: 'rgba(255,255,255,0.06)', 
+            backdropFilter: 'blur(12px)', 
+            borderRadius: '99px', 
+            border: '1px solid rgba(255,255,255,0.05)',
+            fontSize: '13px',
+            fontWeight: '600',
+            color: color
+        }}>
+            {icon}
+            <span>{text}</span>
+        </div>
+    );
+}
+
 function VerifiedBadge() {
   return (
     <svg 
       viewBox="0 0 24 24" 
-      width="36" 
-      height="36" 
-      style={{ marginTop: '8px', flexShrink: 0 }}
+      width="32" 
+      height="32" 
+      style={{ flexShrink: 0, filter: 'drop-shadow(0 0 8px rgba(29, 155, 240, 0.5))' }}
     >
       <path 
         fill="#1d9bf0" 

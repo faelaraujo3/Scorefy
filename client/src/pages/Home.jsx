@@ -1,19 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import AlbumCard from '../components/AlbumCard';
-import { mockAlbums } from '../lib/mockAlbums';
 import { ArrowRight, Sparkles, Disc, Music } from 'lucide-react';
 
-
+// Imagens estáticas do banner (mantidas conforme seu design)
 import billieImg from '../assets/Billie.jpg';
 import taylorImg from '../assets/Taylor2.jpg';
 import addisonImg from '../assets/addison.png';
 import logoAddison from '../assets/addisonlogo.png';
 
-export default function Home() {
+export default function Home({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Estados para dados reais do Backend
+  const [albums, setAlbums] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // BANNER EM CARROSSEL - apresenta as novidades do site
+  // Busca os álbuns do MongoDB ao carregar a página
+  useEffect(() => {
+    fetch('http://localhost:5000/api/albuns')
+      .then(res => res.json())
+      .then(data => {
+        // Mapeia os dados do backend
+        const mappedAlbums = data.map(item => ({
+          id: item.id_album,
+          title: item.title,
+          artist: item.artist || item.nome_artista,
+          image: item.image,
+          rating: 4.8, // Nota fixa até implementarmos o cálculo de média real
+          year: item.year,
+          genre: item.genre
+        }));
+        setAlbums(mappedAlbums);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Erro ao buscar álbuns:", err);
+        setLoading(false);
+      });
+  }, []);
+
+  // BANNER EM CARROSSEL
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
@@ -77,11 +104,11 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [slides.length]);
 
-
-  const safeAlbums = mockAlbums || [];
-  const trendingAlbums = safeAlbums.slice(0, 5);
-  const topRatedAlbums = safeAlbums.filter(a => a.rating >= 4.5);
-  const newReleases = safeAlbums.slice(3, 8);
+  // Filtros lógicos (simulados no front com os dados reais)
+  const safeAlbums = albums || [];
+  const trendingAlbums = safeAlbums.slice(0, 8); // Pega os primeiros 8 do banco
+  const topRatedAlbums = safeAlbums.filter(a => a.rating >= 4.5).slice(0, 8);
+  const newReleases = safeAlbums.filter(a => a.year >= 2024).slice(0, 8);
 
   return (
     <>
@@ -109,7 +136,7 @@ export default function Home() {
           boxSizing: 'border-box'
         }}
       >
-        <Header onSearch={setSearchQuery} />
+        <Header onSearch={setSearchQuery} user={user} onLogout={onLogout} />
 
         <main
           style={{
@@ -121,7 +148,11 @@ export default function Home() {
             gap: '48px'
           }}
         >
-          {searchQuery ? (
+          {loading ? (
+             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px', color: '#9ca3af' }}>
+                Carregando biblioteca...
+             </div>
+          ) : searchQuery ? (
             <div>
               <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' }}>
                 Resultados para "{searchQuery}"
@@ -178,7 +209,7 @@ export default function Home() {
                         boxSizing: 'border-box'
                       }}
                     >
-                      {/* Overlay para inagens */}
+                      {/* Overlay para imagens */}
                       {slide.type === 'image' && (
                         <div
                           style={{
@@ -221,18 +252,13 @@ export default function Home() {
                               height: '120px', 
                               marginBottom: '5px',
                               width: '110%',
-
                               backgroundColor: slide.titleColor || '#008dc5ff',
-
                               maskImage: `url(${slide.titleImage})`,
                               WebkitMaskImage: `url(${slide.titleImage})`, 
-
                               maskSize: 'contain',
                               WebkitMaskSize: 'contain',
-
                               maskRepeat: 'no-repeat',
                               WebkitMaskRepeat: 'no-repeat',
-
                               maskPosition: 'left center',
                               WebkitMaskPosition: 'left center'
                             }}
@@ -323,6 +349,7 @@ export default function Home() {
                 </div>
               </div>
 
+              {/* Seções dinâmicas com dados do banco */}
               <SectionRow title="Em Alta" albums={trendingAlbums} />
               <SectionRow title="Melhores Avaliações" albums={topRatedAlbums} />
               <SectionRow title="Novos Lançamentos" albums={newReleases} />
@@ -405,6 +432,7 @@ function SectionRow({ title, albums }) {
       </div>
 
       <div
+        className="hide-scrollbar"
         style={{
           display: 'flex',
           gap: '24px',
@@ -421,7 +449,6 @@ function SectionRow({ title, albums }) {
           </div>
         ))}
       </div>
-      <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
     </section>
   );
 }

@@ -112,6 +112,7 @@ def listar_albuns():
             "genre": 1,
             "year": 1,
             "image": 1,
+            "description": 1,
             "nome_artista": "$artista_info.name"
         }}
     ]

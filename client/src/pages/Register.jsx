@@ -15,8 +15,8 @@ export default function Register() {
     setError('');
     
     try {
-      // Conecta com o backend Flask
-      const response = await fetch('http://localhost:5000/api/register', {
+      // Conecta com o backend
+      const response = await fetch('http://localhost:5000/api/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome, email, senha }),

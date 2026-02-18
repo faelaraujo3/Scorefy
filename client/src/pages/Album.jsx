@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { mockAlbums } from '../lib/mockAlbums';
+// Removemos a importação do mockAlbums pois vamos usar o fetch
 import { Heart, Plus, Star, StarHalf, MessageCircle, MoreHorizontal, CornerDownRight } from 'lucide-react';
 
-// Mocks simulando os dados que virão do banco
+// Mantivemos os reviews mockados por enquanto para preencher a tela, 
+// já que o backend ainda não retorna reviews específicas por álbum na listagem principal
 const MOCK_REVIEWS = [
     {
         id: 1,
@@ -46,13 +47,40 @@ const MOCK_REVIEWS = [
 export default function Album() {
     const { id } = useParams();
     const navigate = useNavigate();
+    
+    // Estados para dados reais
     const [album, setAlbum] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
 
-    // Simula a busca no banco de dados usando o ID da URL
+    // Busca os dados reais no Backend
     useEffect(() => {
-        const foundAlbum = mockAlbums.find(a => a.id === parseInt(id));
-        setAlbum(foundAlbum);
+        fetch('http://localhost:5000/api/albuns')
+            .then(res => res.json())
+            .then(data => {
+                // O ID da URL vem como string, convertemos para int para comparar com o banco
+                const found = data.find(a => a.id_album === parseInt(id));
+                
+                if (found) {
+                    setAlbum({
+                        id: found.id_album,
+                        title: found.title,
+                        // Tenta pegar o nome do artista de várias formas para garantir compatibilidade
+                        artist: found.nome_artista || found.artist || "Artista Desconhecido",
+                        image: found.image, // URL da capa vinda do MongoDB
+                        year: found.year,
+                        genre: found.genre,
+                        // Se o banco não tiver descrição, usa um placeholder
+                        description: found.description || "Sem descrição disponível para este álbum.",
+                        rating: 4.5 // Nota fixa até implementarmos a média real
+                    });
+                }
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Erro ao carregar álbum:", err);
+                setLoading(false);
+            });
     }, [id]);
 
     // Função para renderizar estrelas
@@ -70,12 +98,26 @@ export default function Album() {
         return stars;
     };
 
-    if (!album) {
+    if (loading) {
         return (
             <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', flexDirection: 'column' }}>
                 <Header />
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <h2>Carregando álbum... ou álbum não encontrado.</h2>
+                    <h2 style={{ color: '#9ca3af' }}>Carregando dados do álbum...</h2>
+                </div>
+            </div>
+        );
+    }
+
+    if (!album) {
+        return (
+            <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', flexDirection: 'column' }}>
+                <Header />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                    <h2 style={{ fontSize: '24px' }}>Álbum não encontrado</h2>
+                    <button onClick={() => navigate('/')} style={{ padding: '10px 20px', borderRadius: '99px', border: '1px solid white', background: 'transparent', color: 'white', cursor: 'pointer' }}>
+                        Voltar para o Início
+                    </button>
                 </div>
             </div>
         );
@@ -93,6 +135,7 @@ export default function Album() {
                     left: 0,
                     right: 0,
                     height: '600px',
+                    // Tenta usar a imagem do álbum como base do gradiente, se não, usa azul genérico
                     background: `radial-gradient(circle at 70% 20%, rgba(41, 119, 165, 0.3) 0%, rgba(22, 27, 29, 1) 60%)`,
                     zIndex: 0,
                     pointerEvents: 'none'
@@ -112,18 +155,37 @@ export default function Album() {
                             borderRadius: '24px',
                             boxShadow: '0 30px 60px -15px rgba(0,0,0,0.9)',
                             overflow: 'hidden',
-                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            backgroundColor: '#1f1f22' // Fallback se a imagem falhar
                         }}
                     >
-                        <img src={album.image} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img 
+                            src={album.image} 
+                            alt={album.title} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.style.display = 'none'; // Esconde se der erro
+                                e.target.parentNode.style.display = 'flex';
+                                e.target.parentNode.style.alignItems = 'center';
+                                e.target.parentNode.style.justifyContent = 'center';
+                                e.target.parentNode.innerText = 'Sem Capa';
+                                e.target.parentNode.style.color = '#555';
+                            }}
+                        />
                     </div>
 
                     {/* Informações*/}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
 
-                        <h1 style={{ fontSize: '72px', fontWeight: '900', margin: 0, lineHeight: '1.05', letterSpacing: '-0.04em', textShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
-                            {album.title}
-                        </h1>
+                        <div>
+                            <span style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: '8px', display: 'block' }}>
+                                {album.genre}
+                            </span>
+                            <h1 style={{ fontSize: '72px', fontWeight: '900', margin: 0, lineHeight: '1.05', letterSpacing: '-0.04em', textShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
+                                {album.title}
+                            </h1>
+                        </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #3be7e7ff, #e770ffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', color: '#121215' }}>
@@ -146,6 +208,11 @@ export default function Album() {
                             <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '20px' }}>•</span>
                             <span style={{ color: '#9ca3af', fontSize: '20px', fontWeight: '500' }}>{album.year}</span>
                         </div>
+
+                        {/* Descrição vinda do Banco */}
+                        <p style={{ fontSize: '16px', color: '#d1d5db', lineHeight: '1.6', maxWidth: '600px', margin: 0 }}>
+                            {album.description}
+                        </p>
 
                         {/* Balão de Nota + Botão de Favoritar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginTop: '16px', flexWrap: 'wrap' }}>

@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Bell, User, Flame, Globe, Sparkles } from 'lucide-react';
 import logoScorefy from '../assets/logoscorefy.png';
 
-export default function Header({ onSearch, hideSearch }) {
+export default function Header({ onSearch, hideSearch, hideNav }) {
   const [bellHover, setBellHover] = useState(false);
   const [userHover, setUserHover] = useState(false);
   const [inputFocus, setInputFocus] = useState(false);
   
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <header
@@ -28,7 +31,9 @@ export default function Header({ onSearch, hideSearch }) {
       }}
     >
       {/* Logo e titulo do site */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', zIndex: 20 }}>
+      <div 
+      onClick={() => navigate('/')}
+      style={{ display: 'flex', alignItems: 'center', gap: '12px', zIndex: 20, cursor: 'pointer' }}>
         <img
           src={logoScorefy}
           alt="Logo Scorefy"
@@ -37,7 +42,7 @@ export default function Header({ onSearch, hideSearch }) {
         <span
           style={{
             fontWeight: 'bold',
-            fontSize: '20px',
+            fontSize: '23px',
             letterSpacing: '-0.025em',
             color: 'white',
             display: 'block'
@@ -48,25 +53,47 @@ export default function Header({ onSearch, hideSearch }) {
       </div>
 
       {/* Navegação central centralizada */}
-      <nav
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '9999px',
-          padding: '4px',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 10
-        }}
-      >
-        <NavButton icon={<Globe size={18} />} label="Explorar" active={true} />
-        <NavButton icon={<Flame size={18} />} label="Em Alta" />
-        <NavButton icon={<Sparkles size={18} />} label="Lançamentos" />
-      </nav>
+      {!hideNav && (
+        <nav
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '9999px',
+            padding: '4px',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10
+          }}
+        >
+          {/* Botão Explorar = Home */}
+          <NavButton 
+            icon={<Globe size={18} />} 
+            label="Explorar" 
+            active={isActive('/')} 
+            onClick={() => navigate('/')} 
+          />
+          
+          {/* Botão Em Alta /trending */}
+          <NavButton 
+            icon={<Flame size={18} />} 
+            label="Em Alta" 
+            active={isActive('/trending')} 
+            onClick={() => navigate('/trending')} 
+          />
+          
+          {/* Botão Lançamentos /releases */}
+          <NavButton 
+            icon={<Sparkles size={18} />} 
+            label="Lançamentos" 
+            active={isActive('/releases')} 
+            onClick={() => navigate('/releases')} 
+          />
+        </nav>
+      )}
 
       {/* Busca e Perfil */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', zIndex: 20 }}>
@@ -177,10 +204,19 @@ export default function Header({ onSearch, hideSearch }) {
   );
 }
 
-function NavButton({ icon, label, active }) {
+function NavButton({ icon, label, active, onClick }) {
   const [isHovered, setIsHovered] = useState(false);
   const baseStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '9999px', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s', border: 'none', cursor: 'pointer', outline: 'none' };
   const activeStyle = { backgroundColor: '#0891b2', color: 'white', boxShadow: '0 10px 15px -3px rgba(8, 145, 178, 0.3)' };
   const inactiveStyle = { backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.05)' : 'transparent', color: isHovered ? 'white' : '#9ca3af' };
-  return <button onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{...baseStyle, ...(active ? activeStyle : inactiveStyle)}}>{icon}<span>{label}</span></button>;
+  return (
+    <button 
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)} 
+      onMouseLeave={() => setIsHovered(false)} 
+      style={{...baseStyle, ...(active ? activeStyle : inactiveStyle)}}
+    >
+      {icon}<span>{label}</span>
+    </button>
+  );
 }

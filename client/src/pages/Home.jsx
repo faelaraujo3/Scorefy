@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import AlbumCard from '../components/AlbumCard';
 import { ArrowRight, Sparkles, Disc, Music } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Imagens estáticas do banner (mantidas conforme seu design)
 import billieImg from '../assets/Billie.jpg';
@@ -57,7 +58,8 @@ export default function Home({ user, onLogout }) {
       icon: <Sparkles size={12} />,
       title: 'Descubra um novo jeito de curtir música.',
       desc: 'Avalie, compartilhe e descubra o que seus amigos estão ouvindo em tempo real.',
-      btnText: 'Começar a Avaliar'
+      btnText: 'Começar a Avaliar',
+      path: '/',
     },
     {
       id: 2,
@@ -70,7 +72,8 @@ export default function Home({ user, onLogout }) {
       titleColor: '#83ecffff',
       overlay: 'linear-gradient(90deg, #0e5f94ff 0%, #11528faa 30%, rgba(11, 83, 131, 0) 70%)',
       desc: 'Confira as avaliações do álbum eleito como "Melhor da Década" pelos nossos usuários.',
-      btnText: 'Visitar Álbum'
+      btnText: 'Visitar Álbum',
+      path: '/album/45',
     },
     {
       id: 3,
@@ -83,7 +86,8 @@ export default function Home({ user, onLogout }) {
       titleColor: '#f8dfb0ff',
       overlay: 'linear-gradient(90deg, #793322ff 10%, #86352aaa 40%, rgba(92, 39, 10, 0) 80%)',
       desc: 'Confira as reações mistas da comunidade ao lançamento mais recente de Taylor Swift.',
-      btnText: 'Visitar Álbum'
+      btnText: 'Visitar Álbum',
+      path: '/album/42',
     },
     {
       id: 4,
@@ -96,7 +100,8 @@ export default function Home({ user, onLogout }) {
       titleImage: logoAddison,
       overlay: 'linear-gradient(90deg, #d1a820f3 10%, #b99328aa 40%, rgba(173, 122, 12, 0) 80%)',
       desc: 'De celebridade da internet à indicada ao Grammy, conheça o álbum da Revelação do Ano pelo Scorefy.',
-      btnText: 'Visitar Álbum'
+      btnText: 'Visitar Álbum',
+      path: '/album/48',
     }
   ];
 
@@ -296,7 +301,7 @@ export default function Home({ user, onLogout }) {
                         </p>
 
                         {/* Botão */}
-                        <HeroButton text={slide.btnText} />
+                        <HeroButton text={slide.btnText} path={slide.path} />
                       </div>
 
                       {/* Decoração para o slide Gradiente */}
@@ -354,9 +359,9 @@ export default function Home({ user, onLogout }) {
               </div>
 
               {/* Seções dinâmicas com dados do banco */}
-              <SectionRow title="Em Alta" albums={sections.trending} />
-              <SectionRow title="Melhores Avaliações" albums={sections.top_rated} />
-              <SectionRow title="Novos Lançamentos" albums={sections.new_releases} />
+              <SectionRow title="Em Alta" albums={sections.trending} path="/trending" />
+              <SectionRow title="Melhores Avaliações" albums={sections.top_rated} path="/top-rated" />
+              <SectionRow title="Novos Lançamentos" albums={sections.new_releases} path="/releases" />
             </>
           )}
         </main>
@@ -365,10 +370,13 @@ export default function Home({ user, onLogout }) {
   );
 }
 
-function HeroButton({ text }) {
+function HeroButton({ text, path }) {
   const [hover, setHover] = useState(false);
+  const navigate = useNavigate(); // hook para navegação
+
   return (
     <button
+      onClick={() => navigate(path)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -389,8 +397,9 @@ function HeroButton({ text }) {
   );
 }
 
-function SectionRow({ title, albums }) {
+function SectionRow({ title, albums, path }) {
   const [btnHover, setBtnHover] = useState(false);
+  const navigate = useNavigate();
 
   if (!albums || albums.length === 0) return null;
 
@@ -411,6 +420,7 @@ function SectionRow({ title, albums }) {
         <button
           onMouseEnter={() => setBtnHover(true)}
           onMouseLeave={() => setBtnHover(false)}
+          onClick={() => navigate(path)}
           style={{
             display: 'flex',
             alignItems: 'center',

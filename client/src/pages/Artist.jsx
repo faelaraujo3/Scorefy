@@ -58,7 +58,7 @@ export default function Artist() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', paddingBottom: '80px', overflowX: 'hidden' }}>
-      <Header />
+      <Header hideNav={true} hideSearch={true} />
 
       {/* --- BACKGROUND --- */}
       <div 

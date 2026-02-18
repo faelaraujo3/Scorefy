@@ -1,11 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-// Removemos a importação do mockAlbums pois vamos usar o fetch
 import { Heart, Plus, Star, StarHalf, MessageCircle, MoreHorizontal, CornerDownRight } from 'lucide-react';
 
-// Mantivemos os reviews mockados por enquanto para preencher a tela, 
-// já que o backend ainda não retorna reviews específicas por álbum na listagem principal
 const MOCK_REVIEWS = [
     {
         id: 1,
@@ -48,32 +45,46 @@ export default function Album() {
     const { id } = useParams();
     const navigate = useNavigate();
     
-    // Estados para dados reais
     const [album, setAlbum] = useState(null);
+    const [artistPhoto, setArtistPhoto] = useState(null); // Estado para a foto do artista
     const [loading, setLoading] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
 
-    // Busca os dados reais no Backend
     useEffect(() => {
+        // 1. Busca os álbuns
         fetch('http://localhost:5000/api/albuns')
             .then(res => res.json())
             .then(data => {
-                // O ID da URL vem como string, convertemos para int para comparar com o banco
                 const found = data.find(a => a.id_album === parseInt(id));
                 
                 if (found) {
+                    // Normaliza os dados do álbum
+                    const artistName = found.nome_artista || found.artist || "Artista Desconhecido";
+                    
                     setAlbum({
                         id: found.id_album,
                         title: found.title,
-                        // Tenta pegar o nome do artista de várias formas para garantir compatibilidade
-                        artist: found.nome_artista || found.artist || "Artista Desconhecido",
-                        image: found.image, // URL da capa vinda do MongoDB
+                        artist: artistName,
+                        image: found.image,
                         year: found.year,
                         genre: found.genre,
-                        // Se o banco não tiver descrição, usa um placeholder
                         description: found.description || "Sem descrição disponível para este álbum.",
-                        rating: 4.5 // Nota fixa até implementarmos a média real
+                        rating: 4.5
                     });
+
+                    // 2. Busca a foto do artista (endpoint de busca)
+                    fetch(`http://localhost:5000/api/busca?q=${encodeURIComponent(artistName)}`)
+                        .then(res => res.json())
+                        .then(searchData => {
+                            // Encontra o artista exato na lista de resultados
+                            const foundArtist = searchData.artistas.find(
+                                a => a.name.toLowerCase() === artistName.toLowerCase()
+                            );
+                            if (foundArtist && foundArtist.image_url) {
+                                setArtistPhoto(foundArtist.image_url);
+                            }
+                        })
+                        .catch(err => console.error("Erro ao buscar foto do artista:", err));
                 }
                 setLoading(false);
             })
@@ -83,7 +94,6 @@ export default function Album() {
             });
     }, [id]);
 
-    // Função para renderizar estrelas
     const renderStars = (rating, size = 16) => {
         const stars = [];
         const fullStars = Math.floor(rating);
@@ -101,7 +111,7 @@ export default function Album() {
     if (loading) {
         return (
             <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', flexDirection: 'column' }}>
-                <Header />
+                <Header hideNav={true} hideSearch={true} />
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <h2 style={{ color: '#9ca3af' }}>Carregando dados do álbum...</h2>
                 </div>
@@ -112,7 +122,7 @@ export default function Album() {
     if (!album) {
         return (
             <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', flexDirection: 'column' }}>
-                <Header />
+                <Header hideNav={true} hideSearch={true} />
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
                     <h2 style={{ fontSize: '24px' }}>Álbum não encontrado</h2>
                     <button onClick={() => navigate('/')} style={{ padding: '10px 20px', borderRadius: '99px', border: '1px solid white', background: 'transparent', color: 'white', cursor: 'pointer' }}>
@@ -125,20 +135,27 @@ export default function Album() {
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', paddingBottom: '80px' }}>
-            <Header />
+            <Header hideNav={true} hideSearch={true} />
 
-            {/* GRADIENTE FUNDO */}
+            {/* FUNDO GLASSMORPHISM */}
             <div
                 style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: '600px',
-                    // Tenta usar a imagem do álbum como base do gradiente, se não, usa azul genérico
-                    background: `radial-gradient(circle at 70% 20%, rgba(41, 119, 165, 0.3) 0%, rgba(22, 27, 29, 1) 60%)`,
+                    height: '80vh', 
+                    backgroundImage: `url(${album.image})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    // Filtros para o efeito de vidro fosco escuro
+                    filter: 'blur(80px) brightness(0.4) saturate(1.5)', 
                     zIndex: 0,
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
+                    // Máscara para suavizar a transição para o preto
+                    maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)'
                 }}
             />
 
@@ -156,7 +173,7 @@ export default function Album() {
                             boxShadow: '0 30px 60px -15px rgba(0,0,0,0.9)',
                             overflow: 'hidden',
                             border: '1px solid rgba(255, 255, 255, 0.05)',
-                            backgroundColor: '#1f1f22' // Fallback se a imagem falhar
+                            backgroundColor: '#1f1f22'
                         }}
                     >
                         <img 
@@ -164,8 +181,7 @@ export default function Album() {
                             alt={album.title} 
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.style.display = 'none'; // Esconde se der erro
+                                e.target.style.display = 'none';
                                 e.target.parentNode.style.display = 'flex';
                                 e.target.parentNode.style.alignItems = 'center';
                                 e.target.parentNode.style.justifyContent = 'center';
@@ -175,11 +191,11 @@ export default function Album() {
                         />
                     </div>
 
-                    {/* Informações*/}
+                    {/* Informações */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
 
                         <div>
-                            <span style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#3b82f6', marginBottom: '8px', display: 'block' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#fff27bff', marginBottom: '8px', display: 'block' }}>
                                 {album.genre}
                             </span>
                             <h1 style={{ fontSize: '72px', fontWeight: '900', margin: 0, lineHeight: '1.05', letterSpacing: '-0.04em', textShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
@@ -187,10 +203,36 @@ export default function Album() {
                             </h1>
                         </div>
 
+                        {/* Ícone do Artista*/}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #3be7e7ff, #e770ffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', color: '#121215' }}>
-                                {album.artist.charAt(0)}
+                            <div 
+                                onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
+                                style={{ 
+                                    width: '40px', 
+                                    height: '40px', 
+                                    borderRadius: '50%', 
+                                    overflow: 'hidden',
+                                    background: artistPhoto ? 'transparent' : 'linear-gradient(135deg, #3be7e7ff, #e770ffff)', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    fontWeight: 'bold', 
+                                    fontSize: '18px', 
+                                    color: '#121215',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                {artistPhoto ? (
+                                    <img 
+                                        src={artistPhoto} 
+                                        alt={album.artist} 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                    />
+                                ) : (
+                                    album.artist.charAt(0)
+                                )}
                             </div>
+                            
                             <span
                                 onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
                                 onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
@@ -209,30 +251,18 @@ export default function Album() {
                             <span style={{ color: '#9ca3af', fontSize: '20px', fontWeight: '500' }}>{album.year}</span>
                         </div>
 
-                        {/* Descrição vinda do Banco */}
                         <p style={{ fontSize: '16px', color: '#d1d5db', lineHeight: '1.6', maxWidth: '600px', margin: 0 }}>
                             {album.description}
                         </p>
 
                         {/* Balão de Nota + Botão de Favoritar */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginTop: '16px', flexWrap: 'wrap' }}>
-
-                            {/* Balão de Nota */}
                             <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '16px',
-                                padding: '12px 24px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                                backdropFilter: 'blur(20px)',
-                                WebkitBackdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                borderRadius: '24px',
-                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+                                display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 24px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '24px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
                             }}>
-                                <div style={{ display: 'flex', gap: '6px' }}>
-                                    {renderStars(album.rating, 22)}
-                                </div>
+                                <div style={{ display: 'flex', gap: '6px' }}>{renderStars(album.rating, 22)}</div>
                                 <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                                     <span style={{ fontSize: '28px', fontWeight: '900', color: 'white', lineHeight: '1' }}>{album.rating}</span>
@@ -240,25 +270,15 @@ export default function Album() {
                                 </div>
                             </div>
 
-                            {/* Botão de Favoritar */}
                             <button
                                 onClick={() => setIsFavorite(!isFavorite)}
                                 style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    padding: '16px 32px',
-                                    borderRadius: '24px',
+                                    display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 32px', borderRadius: '24px',
                                     backgroundColor: isFavorite ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                                    backdropFilter: 'blur(20px)',
-                                    WebkitBackdropFilter: 'blur(20px)',
+                                    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                                     border: isFavorite ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255, 255, 255, 0.08)',
-                                    color: isFavorite ? '#ef4444' : 'white',
-                                    fontWeight: '600',
-                                    fontSize: '16px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+                                    color: isFavorite ? '#ef4444' : 'white', fontWeight: '600', fontSize: '16px',
+                                    cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
                                 }}
                                 onMouseEnter={e => {
                                     e.currentTarget.style.backgroundColor = isFavorite ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.08)';
@@ -272,7 +292,6 @@ export default function Album() {
                                 <Heart size={22} fill={isFavorite ? "#ef4444" : "none"} color={isFavorite ? "#ef4444" : "currentColor"} />
                                 {isFavorite ? 'Favoritado' : 'Favoritar'}
                             </button>
-
                         </div>
                     </div>
                 </section>
@@ -291,14 +310,10 @@ export default function Album() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                         {MOCK_REVIEWS.map((review, index) => (
                             <React.Fragment key={review.id}>
-
-                                {/* Review Principal */}
                                 <div style={{ display: 'flex', gap: '20px' }}>
-                                    {/* Avatar do Usuário */}
                                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(to bottom right, #2dd4bf, #0d9488)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '16px', flexShrink: 0 }}>
                                         {review.userInitials}
                                     </div>
-
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                                             <div>
@@ -307,22 +322,12 @@ export default function Album() {
                                             </div>
                                             <button style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}><MoreHorizontal size={20} /></button>
                                         </div>
-
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
-                                            {renderStars(review.rating, 16)}
-                                        </div>
-
-                                        <p style={{ margin: 0, fontSize: '15px', lineHeight: '1.6', color: '#e5e7eb' }}>
-                                            {review.text}
-                                        </p>
-
-                                        {/* Botões de Ação da Review */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>{renderStars(review.rating, 16)}</div>
+                                        <p style={{ margin: 0, fontSize: '15px', lineHeight: '1.6', color: '#e5e7eb' }}>{review.text}</p>
                                         <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                                             <ActionButton icon={<Heart size={16} />} label={review.likes} />
                                             <ActionButton icon={<MessageCircle size={16} />} label={review.comments.length > 0 ? review.comments.length : 'Responder'} />
                                         </div>
-
-                                        {/* === COMENTÁRIOS ANINHADOS === */}
                                         {review.comments.length > 0 && (
                                             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '20px', paddingLeft: '20px', borderLeft: '2px solid rgba(255,255,255,0.05)' }}>
                                                 {review.comments.map(comment => (
@@ -335,9 +340,7 @@ export default function Album() {
                                                                 <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{comment.userName}</span>
                                                                 <span style={{ color: '#6b7280', fontSize: '12px' }}>{comment.time}</span>
                                                             </div>
-                                                            <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: '#d1d5db' }}>
-                                                                {comment.text}
-                                                            </p>
+                                                            <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.5', color: '#d1d5db' }}>{comment.text}</p>
                                                             <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
                                                                 <ActionButton icon={<Heart size={14} />} label={comment.likes} small />
                                                                 <ActionButton icon={<CornerDownRight size={14} />} label="Responder" small />
@@ -349,8 +352,6 @@ export default function Album() {
                                         )}
                                     </div>
                                 </div>
-
-                                {/* Divider entre reviews */}
                                 {index < MOCK_REVIEWS.length - 1 && (
                                     <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.05)' }} />
                                 )}
@@ -364,7 +365,6 @@ export default function Album() {
     );
 }
 
-// Subcomponente para os botões de curtir/responder
 function ActionButton({ icon, label, small = false }) {
     const [hover, setHover] = useState(false);
     return (
@@ -372,21 +372,12 @@ function ActionButton({ icon, label, small = false }) {
             onMouseEnter={() => setHover(true)}
             onMouseLeave={() => setHover(false)}
             style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                background: 'transparent',
-                border: 'none',
-                color: hover ? 'white' : '#9ca3af',
-                fontSize: small ? '12px' : '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                padding: 0,
-                transition: 'color 0.2s'
+                display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none',
+                color: hover ? 'white' : '#9ca3af', fontSize: small ? '12px' : '14px', fontWeight: '600',
+                cursor: 'pointer', padding: 0, transition: 'color 0.2s'
             }}
         >
-            {icon}
-            <span>{label}</span>
+            {icon}<span>{label}</span>
         </button>
     );
 }

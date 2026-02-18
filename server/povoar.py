@@ -16,7 +16,7 @@ db.artists.insert_many([
     {"id_artista": 1, "name": "Linkin Park", "bio": "Banda de Nu Metal americana formada em California", "genre": "Nu Metal", "country": "EUA", "formed_year": 1996, "image_url": "https://cdn-images.dzcdn.net/images/artist/cc73698ecf7d3ce03f3b1079888d9c03/1900x1900-000000-80-0-0.jpg"},
     {"id_artista": 2, "name": "Billie Eilish", "bio": "Cantora e compositora de pop alternativo norte americana", "genre": "Pop", "country": "EUA", "formed_year": 2015, "image_url": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500.jpg"},
     {"id_artista": 3, "name": "Taylor Swift", "bio": "Cantora e compositora americana conhecida por misturar pop e country com letras autobiograficas", "genre": "Pop", "country": "EUA", "formed_year": 2006, "image_url": "https://thebackstage-deezer.com/wp-content/uploads/2024/07/taylor-swift3-500x463.jpg"},
-    {"id_artista": 4, "name": "The Beatles", "bio": "Banda britanica de rock considerada uma das mais influentes da historia da musica", "genre": "Rock", "country": "Reino Unido", "formed_year": 1960, "image_url": "https://cdn-images.dzcdn.net/images/artist/fe9eb4463ea87452e84ed97e0c86b878/1900x1900-000000-80-0-0.jpgg"},
+    {"id_artista": 4, "name": "The Beatles", "bio": "Banda britanica de rock considerada uma das mais influentes da historia da musica", "genre": "Rock", "country": "Reino Unido", "formed_year": 1960, "image_url": "https://cdn-images.dzcdn.net/images/artist/fe9eb4463ea87452e84ed97e0c86b878/1900x1900-000000-80-0-0.jpg"},
     {"id_artista": 5, "name": "Nirvana", "bio": "Banda de grunge formada em Seattle que marcou os anos 90", "genre": "Grunge", "country": "EUA", "formed_year": 1987, "image_url": "https://cdn-images.dzcdn.net/images/artist/3ec5542ff520ee74e2befdaba32ef2ef/1900x1900-000000-81-0-0.jpg"},
     {"id_artista": 6, "name": "Legiao Urbana", "bio": "Banda brasileira de rock formada em Brasilia com letras marcantes e politicas", "genre": "Rock", "country": "Brasil", "formed_year": 1982, "image_url": "https://cdn-images.dzcdn.net/images/artist/27331b5535cf5a8fd0cece324c201a18/1900x1900-000000-80-0-0.jpg"},
     {"id_artista": 7, "name": "Dua Lipa", "bio": "Cantora britanica de pop conhecida por sucessos internacionais e estilo moderno", "genre": "Pop", "country": "Reino Unido", "formed_year": 2015, "image_url": "https://cdn-images.dzcdn.net/images/cover/da320055ebaebd2391445b7624d6fe7f/0x1900-000000-80-0-0.jpg"},
@@ -166,7 +166,7 @@ db.albums.insert_many([
         "year": 2017,
         "genre": "Pop Rock",
         "description": "Album com sonoridade mais leve e influencias dos anos 80",
-        "image": "https://cdn-images.dzcdn.net/images/cover/b43c1a8f1be9a9ee3654562e5a949426/1900x1900-000000-80-0-0.jpgg"
+        "image": "https://cdn-images.dzcdn.net/images/cover/b43c1a8f1be9a9ee3654562e5a949426/1900x1900-000000-80-0-0.jpg"
     },
 
     {

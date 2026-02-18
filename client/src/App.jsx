@@ -6,6 +6,7 @@ import Album from './pages/Album';
 import Artist from './pages/Artist';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import AlbumList from './pages/AlbumList';
 import './App.css';
 
 function App() {
@@ -52,6 +53,24 @@ function App() {
         <Route path="/" element={
           <ProtectedRoute>
             <Home user={user} onLogout={handleLogout} /> 
+          </ProtectedRoute>
+        } />
+
+        <Route path="/trending" element={
+          <ProtectedRoute>
+            <AlbumList title="Em Alta" apiEndpoint="/api/lista/em-alta" />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/top-rated" element={
+          <ProtectedRoute>
+            <AlbumList title="Melhores Avaliações" apiEndpoint="/api/lista/melhores" />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/releases" element={
+          <ProtectedRoute>
+            <AlbumList title="Novos Lançamentos" apiEndpoint="/api/lista/lancamentos" />
           </ProtectedRoute>
         } />
         

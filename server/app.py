@@ -184,6 +184,62 @@ def obter_secoes_home():
         "new_releases": novos_lancamentos
     })
 
+
+# Função auxiliar para formatar a resposta
+def formatar_albuns(lista_ids_ou_docs):
+    resultados = []
+    # Se a lista for de dicionários (agregados), extrai os IDs
+    ids = [item["_id"] if "_id" in item else item["id_album"] for item in lista_ids_ou_docs] if lista_ids_ou_docs and isinstance(lista_ids_ou_docs[0], dict) else []
+    
+    # Se a lista já for de documentos completos (caso do 'novos'), usa direto, senão busca
+    if not ids: # Caso seja lista direta de objetos
+        albuns_db = lista_ids_ou_docs
+    else:
+        albuns_db = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
+
+    # Adiciona nome do artista e formata
+    for album in albuns_db:
+        art = artistas_col.find_one({"id_artista": album["id_artista"]})
+        album["artist"] = art["name"] if art else "Desconhecido"
+        # Se você já tiver reviews no banco para calcular a nota real, coloque aqui.
+        # Por enquanto mantemos fixo ou busca da média se tiver.
+        album["rating"] = 4.5 
+        resultados.append(album)
+    
+    return resultados
+
+@app.route('/api/lista/em-alta', methods=['GET'])
+def lista_em_alta():
+    # Pega tudo da última semana, ordenado por contagem
+    uma_semana_atras = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    pipeline = [
+        {"$match": {"created_at": {"$gte": uma_semana_atras}}},
+        {"$group": {"_id": "$id_album", "contagem": {"$sum": 1}}},
+        {"$sort": {"contagem": -1}},
+        {"$limit": 50} 
+    ]
+    ids = list(criticas_col.aggregate(pipeline))
+    # Fallback se vazio
+    if not ids: return jsonify(formatar_albuns(list(albuns_col.find({}, {"_id": 0}).limit(20))))
+    return jsonify(formatar_albuns(ids))
+
+@app.route('/api/lista/melhores', methods=['GET'])
+def lista_melhores():
+    pipeline = [
+        {"$group": {"_id": "$id_album", "media": {"$avg": "$rating"}}},
+        {"$sort": {"media": -1}},
+        {"$limit": 50}
+    ]
+    ids = list(criticas_col.aggregate(pipeline))
+    if not ids: return jsonify(formatar_albuns(list(albuns_col.find({}, {"_id": 0}).limit(20))))
+    return jsonify(formatar_albuns(ids))
+
+@app.route('/api/lista/lancamentos', methods=['GET'])
+def lista_lancamentos():
+    # Ordena por ano decrescente
+    albuns = list(albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(50))
+    return jsonify(formatar_albuns(albuns))
+
 if __name__ == '__main__':
     # Roda na porta 5000
     app.run(debug=True, host='0.0.0.0', port=5000)

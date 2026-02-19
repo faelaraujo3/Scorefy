@@ -228,18 +228,28 @@ def marcar_como_lida(notif_id):
 
 
 # --- SEÇÕES DA HOME (Lógica Completa com Ajustes) ---
+def calcular_nota_media(id_album):
+    """Função auxiliar para calcular a média de um álbum específico"""
+    reviews = list(criticas_col.find({"id_album": id_album}))
+    notas = [r['nota'] for r in reviews if 'nota' in r]
+    return round(sum(notas) / len(notas), 1) if notas else 0.0
+
 def buscar_detalhes_album(lista_agregada):
     if not lista_agregada:
         return []
     
     ids = [item["_id"] for item in lista_agregada]
     albuns = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
+    
     albuns.sort(key=lambda x: ids.index(x["id_album"]))
+    
     for alb in albuns:
         art = artistas_col.find_one({"id_artista": alb["id_artista"]})
         alb["artist"] = art["name"] if art else "Desconhecido"
-        if "rating" not in alb:
-             alb["rating"] = 4.5 
+        
+        reviews = list(criticas_col.find({"id_album": alb["id_album"]}))
+        notas = [r['nota'] for r in reviews if 'nota' in r]
+        alb["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
 
     return albuns
 
@@ -257,7 +267,6 @@ def obter_secoes_home():
     uma_semana = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
     
     pipeline_trending = [
-        # Nota: Isso só funcionará 100% se a data for salva como YYYY-MM-DD
         {"$match": {"data_postagem": {"$gte": uma_semana}}},
         {"$group": {"_id": "$id_album", "contagem": {"$sum": 1}}},
         {"$sort": {"contagem": -1}},
@@ -270,23 +279,32 @@ def obter_secoes_home():
     for nl in novos_lancamentos:
         art = artistas_col.find_one({"id_artista": nl["id_artista"]})
         nl["artist"] = art["name"] if art else "Desconhecido"
-        nl["rating"] = 0
+        
+        reviews = list(criticas_col.find({"id_album": nl["id_album"]}))
+        notas = [r['nota'] for r in reviews if 'nota' in r]
+        nl["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
 
     lista_trending = buscar_detalhes_album(trending_agregados)
+    
     if not lista_trending:
-        # Pega 8 aleatórios ou os primeiros 8 para não repetir 'novos'
         lista_trending = list(albuns_col.find({}, {"_id": 0}).limit(8))
         for x in lista_trending:
              art = artistas_col.find_one({"id_artista": x["id_artista"]})
              x["artist"] = art["name"] if art else "Desconhecido"
+             reviews = list(criticas_col.find({"id_album": x["id_album"]}))
+             notas = [r['nota'] for r in reviews if 'nota' in r]
+             x["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
 
     lista_top = buscar_detalhes_album(melhores_agregados)
+    
     if not lista_top:
-        # Pega 8 pulando os primeiros para variar
         lista_top = list(albuns_col.find({}, {"_id": 0}).skip(8).limit(8))
         for x in lista_top:
              art = artistas_col.find_one({"id_artista": x["id_artista"]})
              x["artist"] = art["name"] if art else "Desconhecido"
+             reviews = list(criticas_col.find({"id_album": x["id_album"]}))
+             notas = [r['nota'] for r in reviews if 'nota' in r]
+             x["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
 
     return jsonify({
         "trending": lista_trending,

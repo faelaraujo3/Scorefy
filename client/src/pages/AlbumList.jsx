@@ -59,7 +59,7 @@ export default function AlbumList({ apiEndpoint }) {
           title: item.title,
           artist: item.artist || item.nome_artista,
           image: item.image,
-          rating: item.media ? item.media.toFixed(1) : 4.5,
+          rating: item.rating !== undefined ? item.rating : 0,
           year: item.year,
           genre: item.genre
         }));

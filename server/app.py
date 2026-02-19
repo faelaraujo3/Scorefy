@@ -419,6 +419,25 @@ def adicionar_favorito(id_user):
 
     return jsonify({"message": "Álbum adicionado aos favoritos"}), 200
 
+# --- REMOVER ÁLBUM DOS FAVORITOS ---
+@app.route("/api/users/<int:id_user>/favorites/<int:id_album>", methods=["DELETE"])
+def remover_favorito(id_user, id_album):
+    usuario = usuarios_col.find_one({"id_user": id_user})
+    if not usuario:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    favoritos = usuario.get("albuns_favoritos", [])
+    if id_album not in favoritos:
+        return jsonify({"error": "Álbum não está nos favoritos"}), 400
+
+    usuarios_col.update_one(
+        {"id_user": id_user},
+        {"$pull": {"albuns_favoritos": id_album}}
+    )
+
+    return jsonify({"message": "Álbum removido dos favoritos"}), 200
+
+
 
 # --- ROTAS DE PERFIL ---
 

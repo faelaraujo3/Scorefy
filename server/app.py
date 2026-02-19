@@ -420,5 +420,74 @@ def adicionar_favorito(id_user):
     return jsonify({"message": "Álbum adicionado aos favoritos"}), 200
 
 
+# --- ROTAS DE PERFIL ---
+
+@app.route('/api/users/<int:id_user>', methods=['GET'])
+def get_user_profile(id_user):
+    # Busca dados do usuário
+    usuario = usuarios_col.find_one({"id_user": id_user}, {"_id": 0, "senha": 0})
+    if not usuario:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    # Busca detalhes dos álbuns favoritos (para mostrar a capa nos slots)
+    fav_ids = usuario.get("albuns_favoritos", [])
+    favoritos_detalhados = []
+    
+    if fav_ids:
+        # Pega os álbuns do banco baseados nos IDs salvos
+        albuns_db = list(albuns_col.find({"id_album": {"$in": fav_ids}}, {"_id": 0}))
+        for fid in fav_ids:
+            found = next((a for a in albuns_db if a["id_album"] == fid), None)
+            if found:
+                if "artist" not in found and "id_artista" in found:
+                    art = artistas_col.find_one({"id_artista": found["id_artista"]})
+                    found["artist"] = art["name"] if art else "Desconhecido"
+                favoritos_detalhados.append(found)
+
+    # Busca as reviews desse usuário para mostrar na lista
+    user_reviews = list(criticas_col.find({"id_user": id_user}).sort("data_postagem", -1))
+    
+    for review in user_reviews:
+        review['_id'] = str(review['_id'])
+        album_data = albuns_col.find_one({"id_album": review['id_album']}, {"_id": 0, "title": 1, "image": 1, "id_artista": 1})
+        if album_data:
+            if "id_artista" in album_data:
+                art = artistas_col.find_one({"id_artista": album_data["id_artista"]})
+                album_data["artist"] = art["name"] if art else ""
+            review["album_info"] = album_data
+
+    return jsonify({
+        "user": usuario,
+        "favorites": favoritos_detalhados,
+        "reviews": user_reviews
+    }), 200
+
+# 2. ATUALIZAR PERFIL - Salva Bio, Nome e a Lista de Favoritos
+@app.route('/api/users/<int:id_user>', methods=['PATCH'])
+def update_user_profile(id_user):
+    data = request.json
+    campos_atualizar = {}
+
+    if 'nome' in data: campos_atualizar['nome'] = data['nome']
+    if 'bio' in data: campos_atualizar['bio'] = data['bio']
+    if 'localizacao' in data: campos_atualizar['localizacao'] = data['localizacao']
+    
+    if 'albuns_favoritos' in data:
+        favoritos = data['albuns_favoritos']
+        if isinstance(favoritos, list):
+            lista_limpa = [int(x) for x in favoritos if isinstance(x, (int, str)) and str(x).isdigit()]
+            campos_atualizar['albuns_favoritos'] = lista_limpa[:5]
+
+    if not campos_atualizar:
+        return jsonify({"message": "Nada para atualizar"}), 200
+
+    result = usuarios_col.update_one({"id_user": id_user}, {"$set": campos_atualizar})
+    
+    if result.matched_count == 0:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    return jsonify({"message": "Perfil atualizado!"}), 200
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

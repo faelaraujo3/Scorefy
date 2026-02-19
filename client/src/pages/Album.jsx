@@ -152,18 +152,35 @@ export default function Album() {
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80vh', backgroundImage: `url(${album.image})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(80px) brightness(0.3)', zIndex: 0, pointerEvents: 'none', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)' }} />
 
             <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 24px', position: 'relative', zIndex: 10 }}>
+
                 {/* Header do Álbum */}
                 <section style={{ display: 'flex', gap: '50px', alignItems: 'center', marginBottom: '80px' }}>
                     <img src={album.image} alt={album.title} style={{ width: '280px', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }} />
                     <div style={{ flex: 1 }}>
                         <h1 style={{ fontSize: '56px', fontWeight: '900', margin: '0 0 16px 0', letterSpacing: '-0.04em' }}>{album.title}</h1>
+                        
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', background: '#222' }}>
+                            {/* FOTO DO ARTISTA CLICÁVEL */}
+                            <div 
+                                onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
+                                style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', background: '#222', cursor: 'pointer' }}
+                            >
                                 {artistPhoto && <img src={artistPhoto} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
                             </div>
-                            <span style={{ fontSize: '20px', fontWeight: '600', opacity: 0.9 }}>{album.artist}</span>
+                            
+                            {/* NOME DO ARTISTA CLICÁVEL */}
+                            <span 
+                                onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
+                                style={{ fontSize: '20px', fontWeight: '600', opacity: 0.9, cursor: 'pointer' }}
+                                onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                            >
+                                {album.artist}
+                            </span>
+                            
                             <span style={{ opacity: 0.4 }}>• {album.year}</span>
                         </div>
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.05)', padding: '10px 20px', borderRadius: '14px', width: 'fit-content' }}>
                             {renderStars(album.rating, 20)}
                             <span style={{ fontSize: '22px', fontWeight: 'bold' }}>{album.rating}</span>

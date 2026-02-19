@@ -1,71 +1,170 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
-import { mockAlbums } from '../lib/mockAlbums';
-import { User, Pencil, MapPin, Search, X, Plus, Star, StarHalf, Check, Disc, Heart } from 'lucide-react';
-
-// Mocks de reviews do usuário para visualização
-const MOCK_REVIEWS = [
-  { id: 101, albumId: 1, rating: 5, date: '15 Fev 2026', text: 'Perfeito.' },
-  { id: 102, albumId: 7, rating: 4.5, date: '10 Fev 2026', text: 'Um dos melhores álbuns pop recentes. Quase perfeito.' },
-  { id: 103, albumId: 2, rating: 4, date: '28 Jan 2026', text: 'Muito bom, mas achei algumas faixas repetitivas pro meio do disco.' },
-  { id: 104, albumId: 5, rating: 5, date: '12 Jan 2026', text: 'Energia pura do começo ao fim!' },
-];
+import { User, Pencil, MapPin, Search, X, Plus, Star, StarHalf, Check, Trash2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext'; 
 
 export default function Profile() {
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  
-  // Dados salvos do usuário
+  const [loading, setLoading] = useState(true);
+
+  // Dados do Perfil
   const [profileData, setProfileData] = useState({
-    name: 'fael',
-    bio: 'Ouvindo de tudo um pouco.',
-    location: 'João Monlevade, MG',
-    favoriteAlbumId: 1
+    name: '',
+    bio: '',
+    location: '',
+    reviews: []
   });
 
-  // Estado temporário para o formulário de edição
-  const [tempData, setTempData] = useState({ ...profileData });
-  const [albumSearchQuery, setAlbumSearchQuery] = useState('');
-  const [showAlbumDropdown, setShowAlbumDropdown] = useState(false);
-
-  // Top 5 Álbuns Favoritos (Slots)
-  const [topAlbums, setTopAlbums] = useState([null, null, null, null, null]);
+  const [topAlbumsSlots, setTopAlbumsSlots] = useState([null, null, null, null, null]);
+  const [tempData, setTempData] = useState({});
+  
+  // Estados do Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState(null);
   const [modalSearch, setModalSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
 
-  // Paginação de Reviews
-  const [visibleReviews, setVisibleReviews] = useState(2);
+  // --- 1. CARREGAR DADOS ---
+  useEffect(() => {
+    if (user?.id_user) {
+      fetchProfile();
+    }
+  }, [user]);
 
-  const handleSaveProfile = () => {
-    setProfileData(tempData);
-    setIsEditing(false);
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${user.id_user}`);
+      const data = await res.json();
+      
+      if (data.user) {
+        setProfileData({
+          name: data.user.nome || data.user.username,
+          bio: data.user.bio || '',
+          location: data.user.localizacao || '',
+          reviews: data.reviews || []
+        });
+        
+        // Inicializa dados temporários também
+        setTempData({
+            name: data.user.nome || data.user.username,
+            bio: data.user.bio || '',
+            location: data.user.localizacao || ''
+        });
+
+        const slots = [null, null, null, null, null];
+        if (data.favorites) {
+          data.favorites.forEach((fav, index) => {
+            if (index < 5) slots[index] = fav;
+          });
+        }
+        setTopAlbumsSlots(slots);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error("Erro ao carregar:", error);
+      setLoading(false);
+    }
   };
 
+  // --- 2. SALVAR ---
+  const handleSaveProfile = async () => {
+    const favoriteIds = topAlbumsSlots
+      .filter(album => album !== null)
+      .map(album => album.id_album);
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/users/${user.id_user}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: tempData.name,
+          bio: tempData.bio,
+          localizacao: tempData.location,
+          albuns_favoritos: favoriteIds
+        })
+      });
+
+      if (res.ok) {
+        setProfileData(prev => ({
+          ...prev,
+          name: tempData.name,
+          bio: tempData.bio,
+          location: tempData.location
+        }));
+        setIsEditing(false);
+        // Não recarregamos tudo para não perder o estado visual instantâneo
+      } else {
+        alert("Erro ao salvar perfil");
+      }
+    } catch (e) {
+      alert("Erro de conexão");
+    }
+  };
+
+  const handleStartEditing = () => {
+    // Garante que tempData esteja sincronizado antes de editar
+    setTempData({
+        name: profileData.name,
+        bio: profileData.bio,
+        location: profileData.location
+    });
+    setIsEditing(true);
+  };
+
+  // --- FAVORITOS (Lógica corrigida) ---
   const openSlotModal = (index) => {
+    // REMOVIDA A TRAVA !isEditing. Agora abre sempre.
     setActiveSlot(index);
     setModalSearch('');
+    setSearchResults([]);
     setModalOpen(true);
   };
 
   const selectTopAlbum = (album) => {
-    const newTop = [...topAlbums];
-    newTop[activeSlot] = album;
-    setTopAlbums(newTop);
+    const newSlots = [...topAlbumsSlots];
+    newSlots[activeSlot] = album;
+    setTopAlbumsSlots(newSlots);
     setModalOpen(false);
+    
+    // Se selecionou um álbum e não estava editando, 
+    // ativa o modo edição para aparecer o botão "Salvar"
+    if (!isEditing) {
+        handleStartEditing();
+    }
+  };
+
+  // Busca na API
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (modalSearch.length > 2) {
+        fetch(`http://localhost:5000/api/busca?q=${encodeURIComponent(modalSearch)}`)
+          .then(res => res.json())
+          .then(data => setSearchResults(data.albuns || []));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [modalSearch]);
+
+  const removeTopAlbum = (e, index) => {
+    e.stopPropagation();
+    const newSlots = [...topAlbumsSlots];
+    newSlots[index] = null;
+    setTopAlbumsSlots(newSlots);
+    if (!isEditing) handleStartEditing();
   };
 
   const renderStars = (rating) => {
     const stars = [];
     const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.4;
-    for (let i = 0; i < fullStars; i++) stars.push(<Star key={`f-${i}`} size={16} fill="#facc15" color="#facc15" />);
-    if (hasHalfStar) stars.push(<StarHalf key="h" size={16} fill="#facc15" color="#facc15" />);
-    const currentCount = stars.length;
-    for (let i = 0; i < (5 - currentCount); i++) stars.push(<Star key={`e-${i}`} size={16} color="#1f2937" fill="rgba(31, 41, 55, 0.5)" />);
+    const hasHalf = rating % 1 >= 0.4;
+    for (let i = 0; i < fullStars; i++) stars.push(<Star key={i} size={14} fill="#facc15" color="#facc15" />);
+    if (hasHalf) stars.push(<StarHalf key="h" size={14} fill="#facc15" color="#facc15" />);
     return stars;
   };
 
-  const currentFavoriteAlbum = mockAlbums.find(a => a.id === (isEditing ? tempData.favoriteAlbumId : profileData.favoriteAlbumId));
+  if (!user) return <div style={{ color: 'white', padding: 40 }}>Faça login para ver seu perfil.</div>;
+  if (loading) return <div style={{ color: 'white', padding: 40 }}>Carregando...</div>;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', paddingBottom: '80px' }}>
@@ -73,108 +172,57 @@ export default function Profile() {
 
       <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '48px 24px', display: 'flex', flexDirection: 'column', gap: '48px' }}>
         
-        {/* === SEÇÃO DO PERFIL (HEADER) === */}
+        {/* HEADER PERFIL */}
         <section style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '32px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: '32px', flex: 1 }}>
-            {/* Avatar Grande */}
             <div style={{ width: '140px', height: '140px', borderRadius: '50%', background: 'linear-gradient(to top right, #3be7e7ff, #e770ffff)', padding: '4px', flexShrink: 0 }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#121215', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg 
-              width="100" 
-              height="100" 
-              viewBox="0 0 24 24" 
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path 
-                fill="white" 
-                d="M12,11A4,4,0,1,0,8,7,4,4,0,0,0,12,11Z"
-              />
-              <path 
-                fill="white" 
-                d="M18,21a1,1,0,0,0,1-1A7,7,0,0,0,5,20a1,1,0,0,0,1,1Z"
-              />
-            </svg>
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#121215', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                {user.imagem_url && user.imagem_url !== 'default_avatar.png' ? (
+                   <img src={user.imagem_url} style={{ width:'100%', height:'100%', objectFit:'cover'}} alt="" />
+                ) : (
+                   <User size={64} color="white" />
+                )}
               </div>
             </div>
 
-            {/* Informações */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, maxWidth: '500px' }}>
-              <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0 }}>{profileData.name}</h1>
-              
               {!isEditing ? (
                 <>
-                  {profileData.bio && <p style={{ color: '#d1d5db', lineHeight: '1.6', margin: 0, fontSize: '15px' }}>{profileData.bio}</p>}
+                  <h1 style={{ fontSize: '36px', fontWeight: '800', margin: 0 }}>{profileData.name}</h1>
+                  {profileData.bio ? (
+                    <p style={{ color: '#d1d5db', lineHeight: '1.6', margin: 0, fontSize: '15px' }}>{profileData.bio}</p>
+                  ) : (
+                    <p style={{ color: '#555', fontStyle: 'italic' }}>Sem biografia.</p>
+                  )}
                   {profileData.location && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#9ca3af', fontSize: '14px' }}>
                       <MapPin size={16} /> {profileData.location}
                     </div>
                   )}
-                  {currentFavoriteAlbum && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px', padding: '12px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', width: 'fit-content' }}>
-                      <Heart size={16} color="#ef4444" fill="#ef4444" />
-                      <span style={{ fontSize: '13px', color: '#9ca3af' }}>Álbum Favorito:</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <img src={currentFavoriteAlbum.image} alt={currentFavoriteAlbum.title} style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'cover' }} />
-                        <span style={{ fontSize: '14px', fontWeight: 'bold' }}>{currentFavoriteAlbum.title}</span>
-                      </div>
-                    </div>
-                  )}
                 </>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+                  <input
+                    value={tempData.name}
+                    onChange={e => setTempData({...tempData, name: e.target.value})}
+                    placeholder="Seu nome"
+                    style={{ background: 'transparent', borderBottom: '1px solid #333', color: 'white', fontSize: '24px', fontWeight:'bold', outline: 'none' }}
+                  />
                   <textarea
                     value={tempData.bio}
                     onChange={e => setTempData({...tempData, bio: e.target.value})}
-                    placeholder="Adicione uma biografia..."
+                    placeholder="Sua bio..."
                     rows={3}
-                    style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', fontFamily: 'inherit', resize: 'none', outline: 'none' }}
+                    style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px', color: 'white', outline: 'none' }}
                   />
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '8px 12px' }}>
                     <MapPin size={18} color="#9ca3af" />
                     <input
                       value={tempData.location}
                       onChange={e => setTempData({...tempData, location: e.target.value})}
-                      placeholder="Sua localização"
-                      style={{ background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none', fontFamily: 'inherit' }}
+                      placeholder="Localização"
+                      style={{ background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none' }}
                     />
-                  </div>
-                  
-                  {/* Dropdown de Álbum Favorito */}
-                  <div style={{ position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '8px 12px' }}>
-                      <Disc size={18} color="#9ca3af" />
-                      <input
-                        placeholder="Buscar álbum favorito..."
-                        value={albumSearchQuery}
-                        onChange={(e) => {
-                          setAlbumSearchQuery(e.target.value);
-                          setShowAlbumDropdown(true);
-                        }}
-                        onFocus={() => setShowAlbumDropdown(true)}
-                        style={{ background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none', fontFamily: 'inherit' }}
-                      />
-                    </div>
-                    {showAlbumDropdown && albumSearchQuery && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '8px', backgroundColor: '#1a1a20', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', maxHeight: '200px', overflowY: 'auto', zIndex: 30, boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
-                        {mockAlbums.filter(a => a.title.toLowerCase().includes(albumSearchQuery.toLowerCase())).map(album => (
-                          <div
-                            key={album.id}
-                            onClick={() => {
-                              setTempData({...tempData, favoriteAlbumId: album.id});
-                              setAlbumSearchQuery(album.title);
-                              setShowAlbumDropdown(false);
-                            }}
-                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                          >
-                            <img src={album.image} alt={album.title} style={{ width: '32px', height: '32px', borderRadius: '4px', objectFit: 'cover' }} />
-                            <div>
-                              <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{album.title}</div>
-                              <div style={{ fontSize: '12px', color: '#9ca3af' }}>{album.artist}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
@@ -182,68 +230,57 @@ export default function Profile() {
           </div>
 
           <button
-  onClick={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
-  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.04)'}
-  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-  style={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: '8px', 
-    padding: '12px 24px', 
-    borderRadius: '9999px', 
-    backgroundColor: isEditing ? '#10b981' : 'white', 
-    border: 'none', 
-    color: isEditing ? 'white' : 'black', 
-    fontWeight: 'bold', 
-    fontSize: '14px',
-    cursor: 'pointer', 
-    transition: 'transform 0.2s, background-color 0.2s',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-  }}
->
-  {isEditing ? <><Check size={18} /> Salvar</> : <><Pencil size={18} /> Editar Perfil</>}
-</button>
+            onClick={() => isEditing ? handleSaveProfile() : handleStartEditing()}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', 
+              borderRadius: '9999px', backgroundColor: isEditing ? '#10b981' : 'white', 
+              border: 'none', color: isEditing ? 'white' : 'black', fontWeight: 'bold', 
+              cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}
+          >
+            {isEditing ? <><Check size={18} /> Salvar Alterações</> : <><Pencil size={18} /> Editar Perfil</>}
+          </button>
         </section>
 
         <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
 
-        {/* === SEÇÃO TOP 5 ÁLBUNS === */}
+        {/* TOP 5 FAVORITOS */}
         <section>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            Álbuns Favoritos
-          </h2>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: '24px'}}>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin:0 }}>Álbuns Favoritos</h2>
+            <span style={{fontSize:'13px', color: isEditing ? '#10b981' : '#666'}}>
+                {isEditing ? "Modo edição ativo" : "Clique nos quadrados para editar"}
+            </span>
+          </div>
+          
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
-            {topAlbums.map((album, index) => (
+            {topAlbumsSlots.map((album, index) => (
               <div
                 key={index}
-                onClick={() => openSlotModal(index)}
+                onClick={() => openSlotModal(index)} // Agora abre SEMPRE
                 style={{
                   aspectRatio: '1/1',
                   borderRadius: '16px',
                   backgroundColor: album ? 'transparent' : 'rgba(255,255,255,0.02)',
                   border: album ? 'none' : '2px dashed rgba(255,255,255,0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.3s ease'
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', // Cursor sempre ativo
+                  position: 'relative', overflow: 'hidden',
+                  transition: 'all 0.2s'
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = album ? 'transparent' : 'rgba(255,255,255,0.1)';
-                }}
+                onMouseEnter={e => !album && (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)')}
+                onMouseLeave={e => !album && (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}
               >
                 {album ? (
                   <>
                     <img src={album.image} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', opacity: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-                      <Edit3 size={24} color="white" />
+                    {/* Botão X para remover, aparece no hover ou se estiver editando */}
+                    <div 
+                        onClick={(e) => removeTopAlbum(e, index)}
+                        className="remove-btn"
+                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', padding: 4, borderRadius: '50%', cursor:'pointer', display: isEditing ? 'block' : 'none' }}
+                    >
+                        <Trash2 size={14} color="#ef4444" />
                     </div>
                   </>
                 ) : (
@@ -254,64 +291,57 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* === SEÇÃO MINHAS REVIEWS === */}
+        {/* REVIEWS */}
         <section>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '24px' }}>Minhas Reviews Recentes</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {MOCK_REVIEWS.slice(0, visibleReviews).map(review => {
-              const album = mockAlbums.find(a => a.id === review.albumId);
-              if (!album) return null;
-              return (
-                <div key={review.id} style={{ display: 'flex', gap: '20px', padding: '20px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.03)'}>
-                  <img src={album.image} alt={album.title} style={{ width: '100px', height: '100px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0 }} />
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '24px' }}>Minhas Reviews ({profileData.reviews.length})</h2>
+          {profileData.reviews.length === 0 ? (
+            <p style={{color: '#666'}}>Nenhuma review feita ainda.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {profileData.reviews.map(review => (
+                <div key={review._id} style={{ display: 'flex', gap: '20px', padding: '20px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  {review.album_info && (
+                    <img src={review.album_info.image} alt="Capa" style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{album.title}</h3>
-                        <p style={{ margin: '4px 0 12px 0', fontSize: '14px', color: '#9ca3af' }}>{album.artist}</p>
-                      </div>
-                      <span style={{ fontSize: '12px', color: '#6b7280' }}>{review.date}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>{review.album_info?.title || "Álbum"}</h3>
+                      <span style={{ fontSize: '12px', color: '#6b7280' }}>{review.data_postagem}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', gap: '2px' }}>{renderStars(review.rating)}</div>
-                      <span style={{ fontSize: '14px', fontWeight: 'bold', backgroundColor: 'rgba(126, 194, 211, 0.2)', padding: '2px 8px', borderRadius: '6px', color: '#a5f3fc' }}>{review.rating}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0' }}>
+                      <div style={{ display: 'flex', gap: '2px' }}>{renderStars(review.nota)}</div>
+                      <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#fbbf24' }}>{review.nota}</span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '15px', color: '#e5e7eb', lineHeight: '1.5' }}>"{review.text}"</p>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#e5e7eb' }}>"{review.texto}"</p>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-          
-          {visibleReviews < MOCK_REVIEWS.length && (
-            <button onClick={() => setVisibleReviews(prev => prev + 2)} style={{ marginTop: '24px', width: '100%', padding: '14px', backgroundColor: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: 'white', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
-              Ver Mais Reviews
-            </button>
+              ))}
+            </div>
           )}
         </section>
       </main>
 
-      {/* === MODAL DE BUSCA DE ÁLBUM === */}
+      {/* MODAL */}
       {modalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ backgroundColor: '#18181c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', width: '100%', maxWidth: '500px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', backdropFilter: 'blur(5px)' }}>
+          <div style={{ backgroundColor: '#18181c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', width: '100%', maxWidth: '500px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Escolha um Álbum</h3>
+              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Selecionar Álbum</h3>
               <button onClick={() => setModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer' }}><X size={24} /></button>
             </div>
             
             <div style={{ position: 'relative' }}>
               <Search size={18} color="#9ca3af" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
-              <input autoFocus value={modalSearch} onChange={e => setModalSearch(e.target.value)} placeholder="Pesquisar em álbuns..." style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px 16px 14px 44px', color: 'white', outline: 'none', fontSize: '15px', boxSizing: 'border-box' }} />
+              <input autoFocus value={modalSearch} onChange={e => setModalSearch(e.target.value)} placeholder="Digite para buscar..." style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '14px 16px 14px 44px', color: 'white', outline: 'none', fontSize: '15px', boxSizing: 'border-box' }} />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '350px', overflowY: 'auto' }} className="no-scrollbar">
-              {mockAlbums.filter(a => a.title.toLowerCase().includes(modalSearch.toLowerCase()) || a.artist.toLowerCase().includes(modalSearch.toLowerCase())).map(album => (
-                <div key={album.id} onClick={() => selectTopAlbum(album)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', borderRadius: '12px', cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+              {searchResults.map(album => (
+                <div key={album.id_album} onClick={() => selectTopAlbum(album)} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px', borderRadius: '12px', cursor: 'pointer', transition: 'background-color 0.2s' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)'} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}>
                   <img src={album.image} alt={album.title} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }} />
                   <div>
-                    <div style={{ fontWeight: 'bold', fontSize: '15px' }}>{album.title}</div>
-                    <div style={{ color: '#9ca3af', fontSize: '13px' }}>{album.artist}</div>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{album.title}</div>
+                    <div style={{ color: '#9ca3af', fontSize: '12px' }}>{album.artist || album.nome_artista}</div>
                   </div>
                 </div>
               ))}
@@ -319,6 +349,12 @@ export default function Profile() {
           </div>
         </div>
       )}
+      
+      {/* Estilo extra para o botão de remover aparecer no hover se quiser melhorar */}
+      <style>{`
+        .remove-btn { display: ${isEditing ? 'block' : 'none'}; }
+        div:hover > .remove-btn { display: block; }
+      `}</style>
     </div>
   );
 }

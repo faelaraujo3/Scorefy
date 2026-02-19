@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
 # Conecta ao MongoDB (localhost para rodar no seu Debian)
-client = MongoClient("mongodb://mongodb:27017")
+client = MongoClient("mongodb://localhost:27017/")
 db = client["scorefy_db"]
 
 # 1. Limpa os dados antigos
@@ -35,7 +35,8 @@ db.artists.insert_many([
     {"id_artista": 18, "name": "My Chemical Romance", "bio": "Banda americana de rock associada ao movimento emo dos anos 2000", "genre": "Pop Punk", "country": "EUA", "formed_year": 2001, "image_url": "https://cdn-images.dzcdn.net/images/artist/e34296360cda10a29f85c7170a60178d/1900x1900-000000-80-0-0.jpg"},
     {"id_artista": 19, "name": "Olivia Rodrigo", "bio": "Cantora e compositora americana conhecida por musicas emocionais e letras pessoais", "genre": "Pop", "country": "EUA", "formed_year": 2015, "image_url": "https://cdn-images.dzcdn.net/images/artist/245d3346a03388562d56ab5a63f6549d/1900x1900-000000-80-0-0.jpg"},
     {"id_artista": 20, "name": "Lil Nas X", "bio": "Cantor americano conhecido por musicas inovadoras e letras provocativas", "genre": "Pop", "country": "EUA", "formed_year": 2018, "image_url": "https://cdn-images.dzcdn.net/images/cover/a65e86966cfd34b2aa292856136ef9ac/0x1900-000000-80-0-0.jpg"},
-    {"id_artista": 21, "name": "Harry Styles", "bio": "Cantor britanico conhecido por carreira solo e estilo pop rock", "genre": "Pop", "country": "Reino Unido", "formed_year": 2017, "image_url": "https://cdn-images.dzcdn.net/images/artist/1151dba9b3edc0633adf35b64c21713f/200x200.jpg"}
+    {"id_artista": 21, "name": "Harry Styles", "bio": "Cantor britanico conhecido por carreira solo e estilo pop rock", "genre": "Pop", "country": "Reino Unido", "formed_year": 2017, "image_url": "https://cdn-images.dzcdn.net/images/artist/1151dba9b3edc0633adf35b64c21713f/200x200.jpg"},
+    {"id_artista": 22, "name": "Addison Rae", "bio": "Artista pop/alternativa que ascendeu ao mainstream como influencer", "genre": "Pop", "country": "EUA", "formed_year": 2021, "image_url": "https://cdn-images.dzcdn.net/images/artist/a8bc8bbb055934154ffe5ab48e61d6d0/1000x1000-000000-80-0-0.jpg"}
 ])
 
 # 3. Povoamento de Álbuns (Completo)
@@ -509,6 +510,16 @@ db.albums.insert_many([
         "genre": "Nu Metal",
         "description": "Album de estreia que marcou o inicio do sucesso global do grupo",
         "image": "https://cdn-images.dzcdn.net/images/cover/033a271b5ec10842c287827c39244fb5/0x1900-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 48,
+        "title": "Addison",
+        "id_artista": 22,
+        "year": 2025,
+        "genre": "Pop",
+        "description": "Album de estréia da artista revelação do Scorefy",
+        "image": "https://cdn-images.dzcdn.net/images/cover/6925f0e9f34b95ce5781480b249fd86d/1000x1000-000000-80-0-0.jpg"
     }
 
 ])

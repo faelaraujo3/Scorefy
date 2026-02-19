@@ -7,17 +7,18 @@ import { useAuth } from '../contexts/AuthContext';
 export default function Album() {
     const { id } = useParams();
     const navigate = useNavigate();
-    
     const { user } = useAuth();
 
-    // --- ESTADOS DE DADOS ---
+    // --- ESTADOS ---
     const [album, setAlbum] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [artistPhoto, setArtistPhoto] = useState(null);
     const [loading, setLoading] = useState(true);
+    
+    // Estado Visual do Favorito (Sem Backend por enquanto)
     const [isFavorite, setIsFavorite] = useState(false);
 
-    // --- ESTADOS DO MODAL ---
+    // --- ESTADOS DE AVALIAÇÃO E MODAL ---
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [newReviewRating, setNewReviewRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
@@ -28,11 +29,10 @@ export default function Album() {
     const [replyingTo, setReplyingTo] = useState(null);
     const [replyText, setReplyText] = useState("");
 
-    // 3. Lógica de Verificação (Usando o user do Contexto)
+    // Verificação de Usuário
     const currentUserId = user ? Number(user.id_user) : null;
     const hasUserReviewed = reviews.some(r => Number(r.id_user) === currentUserId);
 
-    // 4. Carrega Dados do Álbum ao iniciar
     useEffect(() => {
         fetchAlbumData();
     }, [id]);
@@ -65,7 +65,13 @@ export default function Album() {
             .catch(() => setLoading(false));
     };
 
-    // --- MANIPULADORES ---
+    // --- AÇÃO DE FAVORITAR (APENAS VISUAL) ---
+    const handleToggleFavorite = () => {
+        // Apenas inverte o estado visual (true/false)
+        setIsFavorite(!isFavorite);
+    };
+
+    // --- LÓGICA DE CLIQUE (Review/Stars) ---
     const handleMouseMoveStar = (e, index) => {
         const { left, width } = e.currentTarget.getBoundingClientRect();
         const percent = (e.clientX - left) / width;
@@ -74,16 +80,15 @@ export default function Album() {
 
     const handlePostReview = () => {
         if (newReviewRating === 0) return alert("Selecione uma nota.");
-        if (!user) return alert("Você precisa estar logado."); // Segurança extra
+        if (!user) return alert("Faça login para avaliar.");
 
         setSubmitting(true);
-
         fetch('http://localhost:5000/api/reviews', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                id_user: Number(currentUserId), // Força envio como Número
-                id_album: Number(id),           // Força envio como Número
+                id_user: Number(currentUserId),
+                id_album: Number(id),
                 nota: newReviewRating,
                 texto: newReviewText
             })
@@ -98,7 +103,7 @@ export default function Album() {
             setShowReviewModal(false);
             setNewReviewText("");
             setNewReviewRating(0);
-            fetchAlbumData(); // Atualiza a lista na hora
+            fetchAlbumData();
         })
         .catch(err => {
             alert(err.message);
@@ -152,23 +157,26 @@ export default function Album() {
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '80vh', backgroundImage: `url(${album.image})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(80px) brightness(0.3)', zIndex: 0, pointerEvents: 'none', maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)', WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 100%)' }} />
 
             <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 24px', position: 'relative', zIndex: 10 }}>
+                
+                {/* === HEADER DO ÁLBUM === */}
+                <section style={{ display: 'flex', gap: '50px', alignItems: 'flex-end', marginBottom: '80px', flexWrap: 'wrap' }}>
+                    <div style={{ width: '280px', flexShrink: 0, borderRadius: '20px', boxShadow: '0 30px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+                        <img src={album.image} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
 
-                {/* Header do Álbum */}
-                <section style={{ display: 'flex', gap: '50px', alignItems: 'center', marginBottom: '80px' }}>
-                    <img src={album.image} alt={album.title} style={{ width: '280px', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }} />
                     <div style={{ flex: 1 }}>
-                        <h1 style={{ fontSize: '56px', fontWeight: '900', margin: '0 0 16px 0', letterSpacing: '-0.04em' }}>{album.title}</h1>
+                        <span style={{ color: '#fffd8bff', fontWeight: 'bold', letterSpacing: '0.1em', fontSize: '14px', textTransform: 'uppercase' }}>{album.genre}</span>
+                        <h1 style={{ fontSize: '56px', fontWeight: '900', margin: '8px 0 16px 0', lineHeight: '1', letterSpacing: '-0.03em' }}>{album.title}</h1>
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                            {/* FOTO DO ARTISTA CLICÁVEL */}
+                        {/* Artista Clicável */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                             <div 
                                 onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
                                 style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', background: '#222', cursor: 'pointer' }}
                             >
-                                {artistPhoto && <img src={artistPhoto} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
+                                {artistPhoto ? <img src={artistPhoto} style={{width:'100%', height:'100%', objectFit:'cover'}} /> : <div style={{width:'100%', height:'100%', background:'#333'}} />}
                             </div>
                             
-                            {/* NOME DO ARTISTA CLICÁVEL */}
                             <span 
                                 onClick={() => navigate(`/artist/${encodeURIComponent(album.artist)}`)}
                                 style={{ fontSize: '20px', fontWeight: '600', opacity: 0.9, cursor: 'pointer' }}
@@ -181,42 +189,62 @@ export default function Album() {
                             <span style={{ opacity: 0.4 }}>• {album.year}</span>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.05)', padding: '10px 20px', borderRadius: '14px', width: 'fit-content' }}>
-                            {renderStars(album.rating, 20)}
-                            <span style={{ fontSize: '22px', fontWeight: 'bold' }}>{album.rating}</span>
+                        {/* DESCRIÇÃO */}
+                        <p style={{ fontSize: '16px', color: '#d1d5db', lineHeight: '1.6', maxWidth: '600px', margin: '0 0 32px 0' }}>
+                            {album.description || "Sem descrição disponível."}
+                        </p>
+
+                        {/* Nota e Botões */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.05)', padding: '10px 20px', borderRadius: '14px' }}>
+                                {renderStars(album.rating, 22)}
+                                <span style={{ fontSize: '24px', fontWeight: 'bold' }}>{album.rating}</span>
+                            </div>
+
+                            {/* BOTÃO DE FAVORITAR (Visual Only) */}
+                            <button 
+                                onClick={handleToggleFavorite}
+                                style={{ 
+                                    display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 28px', borderRadius: '14px', 
+                                    backgroundColor: isFavorite ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.1)', 
+                                    border: isFavorite ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)', 
+                                    color: isFavorite ? '#ef4444' : 'white', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                            >
+                                <Heart size={20} fill={isFavorite ? "#ef4444" : "none"} /> {isFavorite ? 'Salvo' : 'Salvar'}
+                            </button>
                         </div>
                     </div>
                 </section>
 
-                {/* Seção de Reviews */}
-                <section>
+                <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />
+
+                {/* === REVIEWS === */}
+                <section style={{ marginTop: '40px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-                        <h2 style={{ fontSize: '22px', fontWeight: 'bold' }}>Avaliações</h2>
+                        <h2 style={{ fontSize: '28px', fontWeight: 'bold' }}>Reviews ({reviews.length})</h2>
                         
-                        {/* BOTÃO AVALIAR: Só aparece se Logado E Não Avaliou */}
                         {!loading && user && !hasUserReviewed && (
                             <button onClick={() => setShowReviewModal(true)} style={{ background: 'white', color: 'black', border: 'none', padding: '10px 24px', borderRadius: '100px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Plus size={18} /> Avaliar
                             </button>
                         )}
 
-                        {/* MENSAGEM: Se não estiver logado */}
                         {!loading && !user && (
                             <span style={{ color: '#666', fontSize: '14px', cursor: 'pointer' }} onClick={() => navigate('/login')}>
                                 Faça login para avaliar
                             </span>
                         )}
 
-                        {/* MENSAGEM: Se já avaliou */}
                         {hasUserReviewed && (
                             <span style={{ color: '#4ade80', fontSize: '14px', fontWeight: 'bold' }}>
-                                ✓ Você já avaliou este álbum
+                                ✓ Você já avaliou
                             </span>
                         )}
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
-                        {reviews.length === 0 && <p style={{ color: '#6b7280' }}>Seja o primeiro a avaliar este álbum!</p>}
+                        {reviews.length === 0 && <p style={{ color: '#6b7280' }}>Seja o primeiro a avaliar!</p>}
                         
                         {reviews.map((review) => (
                             <div key={review._id} style={{ display: 'flex', gap: '20px' }}>
@@ -244,7 +272,6 @@ export default function Album() {
                                         />
                                     </div>
 
-                                    {/* Input de Resposta */}
                                     {replyingTo === review._id && (
                                         <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
                                             <input autoFocus placeholder="Sua resposta..." value={replyText} onChange={(e) => setReplyText(e.target.value)} style={{ flex: 1, background: '#1a1a1d', border: '1px solid #333', borderRadius: '10px', padding: '10px 15px', color: 'white', outline: 'none' }} />
@@ -252,7 +279,6 @@ export default function Album() {
                                         </div>
                                     )}
 
-                                    {/* Respostas da Review */}
                                     {review.respostas?.map((resp, idx) => (
                                         <div key={idx} style={{ marginTop: '20px', paddingLeft: '20px', borderLeft: '1px solid #333', display: 'flex', gap: '12px' }}>
                                             <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#333', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{resp.username.charAt(0)}</div>
@@ -269,7 +295,7 @@ export default function Album() {
                 </section>
             </main>
 
-            {/* MODAL COMPACTO */}
+            {/* MODAL */}
             {showReviewModal && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', animation: 'fadeIn 0.2s ease-out' }}>
                     <div style={{ background: '#161618', padding: '40px', borderRadius: '28px', width: '440px', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 30px 60px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '28px', position: 'relative' }}>

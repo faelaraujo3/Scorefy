@@ -154,11 +154,13 @@ def curtir_review(review_id):
     data = request.json
     id_user_curtiu = data.get('id_user')
     
-    # 1. Busca quem está curtindo no banco
+    # busca quem está curtindo no banco
     user_curtiu = usuarios_col.find_one({"id_user": id_user_curtiu})
     
-    # Se o usuário não existir, usamos o nome que veio no JSON ou "Alguém"
     nome_quem_curtiu = user_curtiu.get('username') if user_curtiu else data.get('username', 'Alguém')
+    
+    # pega a foto de quem curtiu ---
+    imagem_quem_curtiu = user_curtiu.get('imagem_url') if user_curtiu else "default_avatar.png"
     
     review_original = criticas_col.find_one_and_update(
         {"_id": ObjectId(review_id)},
@@ -168,12 +170,16 @@ def curtir_review(review_id):
     if not review_original:
         return jsonify({"error": "Review não encontrada"}), 404
 
-    # 2. Só notifica se for outra pessoa e se tivermos os dados
+    # Só notifica se for outra pessoa
     if review_original['id_user'] != id_user_curtiu:
+        album_db = albuns_col.find_one({"id_album": review_original['id_album']})
+        nome_album = album_db['title'] if album_db else "Desconhecido"
+
         notificacoes_col.insert_one({
             "para_id_user": review_original['id_user'],
-            "mensagem": f"{nome_quem_curtiu} curtiu sua review do álbum {review_original['id_album']}!",
+            "mensagem": f"{nome_quem_curtiu} curtiu sua review do álbum {nome_album}!", 
             "tipo": "curtida",
+            "imagem_url": imagem_quem_curtiu, 
             "lida": False,
             "data": datetime.now().strftime("%d/%m/%Y %H:%M")
         })
@@ -190,7 +196,10 @@ def obter_notificacoes(id_user):
 def responder_review(review_id):
     data = request.json
     id_resp = data.get('id_user')
+    
     user_resp = usuarios_col.find_one({"id_user": id_resp})
+    
+    imagem_quem_resp = user_resp.get('imagem_url') if user_resp else "default_avatar.png"
     
     nova_resposta = {
         "id_user": id_resp,
@@ -199,18 +208,19 @@ def responder_review(review_id):
         "data": datetime.now().strftime("%d/%m/%Y %H:%M")
     }
 
-    # Adiciona a resposta ao array da review original
     review_alvo = criticas_col.find_one_and_update(
         {"_id": ObjectId(review_id)},
         {"$push": {"respostas": nova_resposta}}
     )
 
-    # Notifica o dono da review (se não for ele mesmo respondendo)
+    # Notifica o dono da review
     if review_alvo and review_alvo['id_user'] != id_resp:
         notificacoes_col.insert_one({
             "para_id_user": review_alvo['id_user'],
             "mensagem": f"{nova_resposta['username']} respondeu sua review!",
             "tipo": "resposta",
+            "texto_comentario": nova_resposta['texto'],
+            "imagem_url": imagem_quem_resp, 
             "lida": False,
             "data": datetime.now().strftime("%d/%m/%Y %H:%M")
         })

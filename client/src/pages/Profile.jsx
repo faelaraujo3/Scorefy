@@ -25,7 +25,7 @@ export default function Profile() {
   const [modalSearch, setModalSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  // --- 1. CARREGAR DADOS ---
+  // --- CARREGAR DADOS ---
   useEffect(() => {
     if (user?.id_user) {
       fetchProfile();
@@ -67,7 +67,7 @@ export default function Profile() {
     }
   };
 
-  // --- 2. SALVAR ---
+  // --- SALVAR ---
   const handleSaveProfile = async () => {
     const favoriteIds = topAlbumsSlots
       .filter(album => album !== null)
@@ -93,7 +93,6 @@ export default function Profile() {
           location: tempData.location
         }));
         setIsEditing(false);
-        // Não recarregamos tudo para não perder o estado visual instantâneo
       } else {
         alert("Erro ao salvar perfil");
       }
@@ -103,7 +102,6 @@ export default function Profile() {
   };
 
   const handleStartEditing = () => {
-    // Garante que tempData esteja sincronizado antes de editar
     setTempData({
         name: profileData.name,
         bio: profileData.bio,
@@ -112,9 +110,8 @@ export default function Profile() {
     setIsEditing(true);
   };
 
-  // --- FAVORITOS (Lógica corrigida) ---
+  // --- FAVORITOS ---
   const openSlotModal = (index) => {
-    // REMOVIDA A TRAVA !isEditing. Agora abre sempre.
     setActiveSlot(index);
     setModalSearch('');
     setSearchResults([]);
@@ -127,8 +124,6 @@ export default function Profile() {
     setTopAlbumsSlots(newSlots);
     setModalOpen(false);
     
-    // Se selecionou um álbum e não estava editando, 
-    // ativa o modo edição para aparecer o botão "Salvar"
     if (!isEditing) {
         handleStartEditing();
     }
@@ -257,14 +252,14 @@ export default function Profile() {
             {topAlbumsSlots.map((album, index) => (
               <div
                 key={index}
-                onClick={() => openSlotModal(index)} // Agora abre SEMPRE
+                onClick={() => openSlotModal(index)}
                 style={{
                   aspectRatio: '1/1',
                   borderRadius: '16px',
                   backgroundColor: album ? 'transparent' : 'rgba(255,255,255,0.02)',
                   border: album ? 'none' : '2px dashed rgba(255,255,255,0.1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', // Cursor sempre ativo
+                  cursor: 'pointer', 
                   position: 'relative', overflow: 'hidden',
                   transition: 'all 0.2s'
                 }}
@@ -274,7 +269,6 @@ export default function Profile() {
                 {album ? (
                   <>
                     <img src={album.image} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    {/* Botão X para remover, aparece no hover ou se estiver editando */}
                     <div 
                         onClick={(e) => removeTopAlbum(e, index)}
                         className="remove-btn"
@@ -350,7 +344,6 @@ export default function Profile() {
         </div>
       )}
       
-      {/* Estilo extra para o botão de remover aparecer no hover se quiser melhorar */}
       <style>{`
         .remove-btn { display: ${isEditing ? 'block' : 'none'}; }
         div:hover > .remove-btn { display: block; }

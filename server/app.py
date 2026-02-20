@@ -60,18 +60,47 @@ def registrar():
     usuarios_col.insert_one(novo_usuario)
     return jsonify({"message": "Conta criada com sucesso!", "id_user": proximo_id}), 201
 
-# --- BUSCA E LISTAGEM ---
+# --- BUSCA E LISTAGEM (ATUALIZADA COM ANO) ---
 @app.route('/api/busca', methods=['GET'])
 def busca_global():
     termo = request.args.get('q', '')
     if not termo:
         return jsonify({"artistas": [], "albuns": []}), 200
+
+    # 1. Busca Artistas pelo nome
     artistas = list(artistas_col.find({"name": {"$regex": termo, "$options": "i"}}, {"_id": 0}))
-    albuns = list(albuns_col.find({"title": {"$regex": termo, "$options": "i"}}, {"_id": 0}))
+
+    # 2. Prepara o filtro de busca para Álbuns (Título ou Gênero)
+    filtro_albuns = {
+        "$or": [
+            {"title": {"$regex": termo, "$options": "i"}},
+            {"genre": {"$regex": termo, "$options": "i"}}
+        ]
+    }
+
+    # 3. Tenta converter o termo para número (para buscar por ANO)
+    try:
+        ano_busca = int(termo)
+        filtro_albuns["$or"].append({"year": ano_busca})
+    except ValueError:
+        # Se não for um número (ex: o usuário buscou "Rock"), ignora a busca por ano
+        pass
+
+    # 4. Busca os Álbuns com o filtro expandido
+    albuns = list(albuns_col.find(filtro_albuns, {"_id": 0}))
+
+    # 5. Adiciona álbuns dos artistas encontrados que ainda não estão na lista
     for art in artistas:
         albuns_do_artista = list(albuns_col.find({"id_artista": art.get("id_artista")}, {"_id": 0}))
         for album in albuns_do_artista:
-            if album not in albuns: albuns.append(album)
+            if album not in albuns: 
+                albuns.append(album)
+
+    # 6. Adiciona o nome do artista em cada álbum para facilitar o Front-end
+    for album in albuns:
+        artista_db = artistas_col.find_one({"id_artista": album.get("id_artista")})
+        album["artist"] = artista_db["name"] if artista_db else "Desconhecido"
+
     return jsonify({"artistas": artistas, "albuns": albuns}), 200
 
 @app.route('/api/albuns', methods=['GET'])

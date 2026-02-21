@@ -39,8 +39,7 @@ db.artists.insert_many([
     {"id_artista": 22, "name": "Addison Rae", "bio": "Artista pop/alternativa que ascendeu ao mainstream como influencer", "genre": "Pop", "country": "EUA", "formed_year": 2021, "image_url": "https://cdn-images.dzcdn.net/images/artist/a8bc8bbb055934154ffe5ab48e61d6d0/1000x1000-000000-80-0-0.jpg"},
     {"id_artista": 23, "name": "Lana Del Rey", "bio": "Cantora e compositora americana conhecida por seu estilo cinematográfico e letras poéticas", "genre": "Pop", "country": "EUA", "formed_year": 2012, "image_url": "https://cdn-images.dzcdn.net/images/artist/8994d3be1a59a72f887f1f8afd2d4c6c/1000x1000-000000-80-0-0.jpg"},
     {"id_artista": 24, "name": "The Marias", "bio": "Banda americana de indie pop com sonoridade suave e influencias latinas", "genre": "Indie Pop", "country": "EUA", "formed_year": 2017, "image_url": "https://cdn-images.dzcdn.net/images/artist/9a81e875aa2689278b4ad8c385aacd12/1000x1000-000000-80-0-0.jpg"},
-    {"id_artista": 25, "name": "Grimes", "bio": "Cantora e produtora canadense conhecida por seu estilo experimental e letras provocativas", "genre": "Experimental", "country": "Canada", "formed_year": 2010, "image_url": "https://cdn-images.dzcdn.net/images/artist/8a207720e8bed18bab25883fba019dc7/500x500-000000-80-0-0.jpg"},
-    {"id_artista": 26, "name": "Bad Bunny", "bio": "Cantor porto riquenho de reggaeton e trap latino com grande impacto global", "genre": "Reggaeton", "country": "Porto Rico", "formed_year": 2016, "image_url": "https://ticketswap-image-cdn.b-cdn.net/public/202507/64916334-0a11-4feb-b0ca-86d2945ab157.jpg"}
+    {"id_artista": 25, "name": "Grimes", "bio": "Cantora e produtora canadense conhecida por seu estilo experimental e letras provocativas", "genre": "Experimental", "country": "Canada", "formed_year": 2010, "image_url": "https://cdn-images.dzcdn.net/images/artist/8a207720e8bed18bab25883fba019dc7/500x500-000000-80-0-0.jpg"}
 
 ])
 
@@ -600,11 +599,111 @@ db.albums.insert_many([
     {
         "id_album": 56,
         "title": "DeBÍ TiRAR MáS FOToS",
-        "id_artista": 26,
+        "id_artista": 13,
         "year": 2024,
         "genre": "Latin Pop",
         "description": "Álbum do Bad Bunny que honra suas raízes porto-riquenhas e mistura reggaeton, trap latino e influências de música tradicional, consolidando seu status como um dos artistas mais inovadores e influentes da música latina contemporânea",
         "image": "https://cdn-images.dzcdn.net/images/cover/d98eaccfbb945bdf68241d6de7fe6a49/500x500-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 57,
+        "title": "Bleach",
+        "id_artista": 5,
+        "year": 1989,
+        "genre": "Grunge",
+        "description": "Álbum de estreia da banda, marcando o início do movimento grunge com um som cru e pesado",
+        "image": "https://cdn-images.dzcdn.net/images/cover/5c4474eb462a904d3b3e0ac13213e836/0x1900-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 58,
+        "title": "Nevermind",
+        "id_artista": 5,
+        "year": 1991,
+        "genre": "Grunge",
+        "description": "Um dos álbuns mais influentes da história do rock, revolucionou a música dos anos 90 e o cenário alternativo",
+        "image": "https://cdn-images.dzcdn.net/images/cover/f0282817b697279e56df13909962a54a/0x1900-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 59,
+        "title": "In Utero",
+        "id_artista": 5,
+        "year": 1993,
+        "genre": "Grunge",
+        "description": "Último álbum de estúdio da banda, trazendo letras intensas e uma sonoridade menos polida",
+        "image": "https://cdn-images.dzcdn.net/images/cover/4d0dfaf6d522f5323aebcc85903d92ac/0x1900-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 60,
+        "title": "Fallen",
+        "id_artista": 14,
+        "year": 2003,
+        "genre": "Gothic Metal",
+        "description": "Álbum de estreia de enorme sucesso global, misturando metal com arranjos sinfônicos e vocais potentes",
+        "image": "https://cdn-images.dzcdn.net/images/cover/56c02d3764f5a078ceecd27b64b7d789/0x1900-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 61,
+        "title": "The Open Door",
+        "id_artista": 14,
+        "year": 2006,
+        "genre": "Gothic Metal",
+        "description": "Segundo álbum da banda, explorando melodias mais complexas e instrumentação clássica",
+        "image": "https://cdn-images.dzcdn.net/images/cover/1ff74ac5b35955c8d4fe115ac1d1f41f/0x1900-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 62,
+        "title": "Rodeo",
+        "id_artista": 15,
+        "year": 2015,
+        "genre": "Hip Hop",
+        "description": "O álbum de estreia altamente aclamado que definiu a sonoridade única e espacial de Travis Scott",
+        "image": "https://cdn-images.dzcdn.net/images/cover/c6fe182fb0f3485428906c7b21873046/0x1900-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 63,
+        "title": "Astroworld",
+        "id_artista": 15,
+        "year": 2018,
+        "genre": "Hip Hop",
+        "description": "Álbum conceitual revolucionário e um dos maiores marcos do rap moderno, repleto de colaborações épicas",
+        "image": "https://cdn-images.dzcdn.net/images/cover/7df7ac6028591a5622f24cf32a555510/1900x1900-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 64,
+        "title": "Utopia",
+        "id_artista": 15,
+        "year": 2023,
+        "genre": "Hip Hop",
+        "description": "Um projeto ambicioso e imersivo com experimentações sonoras que quebram os padrões do trap",
+        "image": "https://cdn-images.dzcdn.net/images/cover/6c91e64b7157f1332a4f6b0de9e4c714/0x1900-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 65,
+        "title": "Ivete Sangalo",
+        "id_artista": 17,
+        "year": 1999,
+        "genre": "Axé",
+        "description": "O álbum que lançou a carreira solo da cantora de axé e marcou o início de uma nova era na música baiana",
+        "image": "https://cdn-images.dzcdn.net/images/cover/39e705b460413e01d3048ddf46e14227/1900x1900-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 66,
+        "title": "Festa",
+        "id_artista": 17,
+        "year": 2001,
+        "genre": "Axé",
+        "description": "Álbum icônico que dominou o Brasil com energia pura, se tornando um clássico instantâneo do Carnaval",
+        "image": "https://cdn-images.dzcdn.net/images/cover/f3acd5859592d26f1b11dc44ca49e267/0x1900-000000-80-0-0.jpg"
     }
 ])
 

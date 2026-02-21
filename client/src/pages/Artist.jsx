@@ -15,11 +15,11 @@ export default function Artist() {
 
   const decodedName = decodeURIComponent(artistName);
 
-  useEffect(() => {
+useEffect(() => {
     setLoading(true);
     fetch(`http://localhost:5000/api/busca?q=${encodeURIComponent(decodedName)}`)
       .then(res => res.json())
-      .then(data => {
+      .then(async data => {
         const foundArtist = data.artistas.find(
           a => a.name.toLowerCase() === decodedName.toLowerCase()
         );
@@ -27,25 +27,43 @@ export default function Artist() {
         if (foundArtist) {
           setArtist(foundArtist);
 
+          // filtra os álbuns do artista
           const artistAlbumsRaw = data.albuns.filter(
             a => a.id_artista === foundArtist.id_artista
           );
 
-          const normalizedAlbums = artistAlbumsRaw.map(a => ({
-            id: a.id_album,
-            title: a.title,
-            artist: foundArtist.name,
-            image: a.image,
-            year: a.year,
-            genre: a.genre,
-            rating: 4.5 
-          }));
+          // buscamos os detalhes de cada álbum pra pegar a nota real
+          const albumsWithRatings = await Promise.all(
+            artistAlbumsRaw.map(async (a) => {
+              try {
+                const res = await fetch(`http://localhost:5000/api/albuns/${a.id_album}`);
+                const albumDetail = await res.json();
+                return {
+                  id: a.id_album,
+                  title: a.title,
+                  artist: foundArtist.name,
+                  image: a.image,
+                  year: a.year,
+                  genre: a.genre,
+                  rating: albumDetail.nota_media || 0 
+                };
+              } catch {
+                return { ...a, id: a.id_album, artist: foundArtist.name, rating: 0 };
+              }
+            })
+          );
 
-          setAlbums(normalizedAlbums);
+          setAlbums(albumsWithRatings);
 
-          if (normalizedAlbums.length > 0) {
-            const total = normalizedAlbums.reduce((acc, curr) => acc + curr.rating, 0);
-            setAverageRating((total / normalizedAlbums.length).toFixed(1));
+          // Calcula a média geral do artista baseada na nota de cada álbum
+          if (albumsWithRatings.length > 0) {
+            const albumsWithReviews = albumsWithRatings.filter(a => a.rating > 0);
+            if (albumsWithReviews.length > 0) {
+              const total = albumsWithReviews.reduce((acc, curr) => acc + curr.rating, 0);
+              setAverageRating((total / albumsWithReviews.length).toFixed(1));
+            } else {
+              setAverageRating("0.0");
+            }
           }
         }
         setLoading(false);
@@ -55,7 +73,6 @@ export default function Artist() {
         setLoading(false);
       });
   }, [decodedName]);
-
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', paddingBottom: '80px', overflowX: 'hidden' }}>
       <Header hideNav={true} hideSearch={true} />

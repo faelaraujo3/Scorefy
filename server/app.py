@@ -590,5 +590,32 @@ def update_user_profile(id_user):
     return jsonify({"message": "Perfil atualizado!"}), 200
 
 
+@app.route('/api/artistas/nome/<string:nome_artista>', methods=['GET'])
+def detalhes_artista_por_nome(nome_artista):
+    artista = artistas_col.find_one({"name": {"$regex": f"^{nome_artista}$", "$options": "i"}}, {"_id": 0})
+    if not artista:
+        return jsonify({"error": "Artista não encontrado"}), 404
+
+    id_artista = artista.get("id_artista")
+    albuns = list(albuns_col.find({"id_artista": id_artista}, {"_id": 0}))
+
+    total_notas = []
+    for album in albuns:
+        reviews = list(criticas_col.find({"id_album": album["id_album"]}))
+        for r in reviews:
+            if 'nota' in r:
+                total_notas.append(r['nota'])
+        
+        notas_album = [r['nota'] for r in reviews if 'nota' in r]
+        album["rating"] = round(sum(notas_album) / len(notas_album), 1) if notas_album else 0.0
+
+    media_artista = round(sum(total_notas) / len(total_notas), 1) if total_notas else 0.0
+
+    return jsonify({
+        "artista": artista,
+        "media_geral": media_artista,
+        "albuns": albuns
+    }), 200
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

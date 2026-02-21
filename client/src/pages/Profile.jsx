@@ -2,9 +2,18 @@ import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import { User, Pencil, MapPin, Search, X, Plus, Star, StarHalf, Check, Trash2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext'; 
+import { useParams } from 'react-router-dom';
 
 export default function Profile() {
+  const { id } = useParams(); 
   const { user } = useAuth();
+
+// Decide qual perfil carregar: o do ID da URL ou o do usuário logado
+  const profileIdToFetch = id || user?.id_user;
+
+// Verifica se o perfil sendo visualizado é o do usuário logado
+  const isMyProfile = user && user.id_user === Number(profileIdToFetch);
+
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -25,18 +34,17 @@ export default function Profile() {
   const [modalSearch, setModalSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  // --- CARREGAR DADOS ---
-  useEffect(() => {
-    if (user?.id_user) {
+useEffect(() => {
+    if (profileIdToFetch) {
       fetchProfile();
     }
-  }, [user]);
+  }, [profileIdToFetch]);
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${user.id_user}`);
-      const data = await res.json();
-      
+      const res = await fetch(`http://localhost:5000/api/users/${profileIdToFetch}`);
+      const data = await res.json();    
+
       if (data.user) {
         setProfileData({
           name: data.user.nome || data.user.username,
@@ -224,8 +232,9 @@ export default function Profile() {
             </div>
           </div>
 
-          <button
-            onClick={() => isEditing ? handleSaveProfile() : handleStartEditing()}
+          {isMyProfile && (
+            <button
+              onClick={() => isEditing ? handleSaveProfile() : handleStartEditing()}
             style={{ 
               display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', 
               borderRadius: '9999px', backgroundColor: isEditing ? '#10b981' : 'white', 
@@ -234,7 +243,8 @@ export default function Profile() {
             }}
           >
             {isEditing ? <><Check size={18} /> Salvar Alterações</> : <><Pencil size={18} /> Editar Perfil</>}
-          </button>
+            </button>
+          )}
         </section>
 
         <div style={{ width: '100%', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)' }} />

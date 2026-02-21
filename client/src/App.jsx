@@ -80,6 +80,10 @@ function App() {
           </ProtectedRoute>
         } />
 
+        <Route path="/profile/:id" element={
+          <Profile user={user} />
+        } />
+
         <Route path="/album/:id" element={
           <ProtectedRoute>
             <Album />

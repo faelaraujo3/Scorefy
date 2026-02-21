@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../components/Header';
 import AlbumCard from '../components/AlbumCard';
-import { ArrowRight, Sparkles, Disc, Music } from 'lucide-react';
+import { ArrowRight, Sparkles, Disc, Music, User, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Imagens estáticas do banner (mantidas conforme seu design)
@@ -17,6 +17,11 @@ export default function Home({ user, onLogout }) {
   // Estados para dados reais do Backend
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Pesquisa
+  const [searchResults, setSearchResults] = useState({ albuns: [], artistas: [], usuarios: [] });
+  const [isSearching, setIsSearching] = useState(false);
+  const navigate = useNavigate();
 
   // carrega as seções de albuns do backend ao montar o componente
   useEffect(() => {
@@ -37,6 +42,9 @@ export default function Home({ user, onLogout }) {
           top_rated: format(data.top_rated),
           new_releases: format(data.new_releases)
         });
+        
+        // Mantém a compatibilidade com a sua variável safeAlbums caso precise
+        setAlbums(format(data.trending)); 
         setLoading(false);
       })
       .catch(err => {
@@ -44,6 +52,30 @@ export default function Home({ user, onLogout }) {
         setLoading(false);
       });
   }, []);
+
+  // LÓGICA DE PESQUISA EM TEMPO REAL
+  useEffect(() => {
+    if (searchQuery.trim().length > 0) {
+      setIsSearching(true);
+      const delayFn = setTimeout(() => {
+        fetch(`http://localhost:5000/api/busca?q=${encodeURIComponent(searchQuery)}`)
+          .then(res => res.json())
+          .then(data => {
+            setSearchResults({
+              albuns: data.albuns || [],
+              artistas: data.artistas || [],
+              usuarios: data.usuarios || []
+            });
+          })
+          .catch(err => console.error("Erro na busca:", err));
+      }, 300);
+
+      return () => clearTimeout(delayFn);
+    } else {
+      setIsSearching(false);
+      setSearchResults({ albuns: [], artistas: [], usuarios: [] });
+    }
+  }, [searchQuery]);
 
   // BANNER EM CARROSSEL
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -113,12 +145,6 @@ export default function Home({ user, onLogout }) {
     return () => clearInterval(interval);
   }, [slides.length]);
 
-  // Filtros lógicos (simulados no front com os dados reais)
-  const safeAlbums = albums || [];
-  const trendingAlbums = safeAlbums.slice(0, 8); // Pega os primeiros 8 do banco
-  const topRatedAlbums = safeAlbums.filter(a => a.rating >= 4.5).slice(0, 8);
-  const newReleases = safeAlbums.filter(a => a.year >= 2024).slice(0, 8);
-
   return (
     <>
       <style>
@@ -133,6 +159,8 @@ export default function Home({ user, onLogout }) {
             background-color: #121215; 
             font-family: 'Plus Jakarta Sans', sans-serif; 
           }
+          
+          @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         `}
       </style>
 
@@ -161,24 +189,94 @@ export default function Home({ user, onLogout }) {
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '50px', color: '#9ca3af' }}>
               Carregando biblioteca...
             </div>
-          ) : searchQuery ? (
-            <div>
-              <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px' }}>
+          ) : isSearching ? (
+            
+            // TELA DE RESULTADOS DA PESQUISA
+             <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+              <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '32px' }}>
                 Resultados para "{searchQuery}"
               </h2>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                  gap: '24px'
-                }}
-              >
-                {safeAlbums
-                  .filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map(album => (
-                    <AlbumCard key={album.id} album={album} />
-                  ))}
-              </div>
+              
+              {/* SEÇÃO 1: ÁLBUNS */}
+              {searchResults.albuns?.length > 0 && (
+                <section style={{ marginBottom: '56px' }}>
+                  <h3 style={{ fontSize: '23px', fontWeight: 'bold', marginBottom: '24px', color: '#ffffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Álbuns
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '24px' }}>
+                    {searchResults.albuns.map(album => (
+                      <AlbumCard key={album.id_album} album={{...album, id: album.id_album, rating: album.rating || 0}} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {searchResults.artistas?.length > 0 && (
+                <section style={{ marginBottom: '56px' }}>
+                  <h3 style={{ fontSize: '23px', fontWeight: 'bold', marginBottom: '24px', color: '#ffffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Artistas
+                  </h3>
+                  <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+                    {searchResults.artistas.map(art => (
+                      <div 
+                        key={art.id_artista} 
+                        onClick={() => navigate(`/artist/${encodeURIComponent(art.name)}`)} 
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', cursor: 'pointer', transition: 'transform 0.2s', width: '180px' }} 
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} 
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <div style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#222', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
+                          {art.image_url ? (
+                            <img src={art.image_url} style={{width:'100%', height:'100%', objectFit:'cover'}} alt={art.name}/>
+                          ) : (
+                            <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                              <User size={64} color="#666" />
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ fontWeight: 'bold', fontSize: '17px', textAlign: 'center' }}>{art.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* SEÇÃO 3: USUÁRIOS */}
+              {searchResults.usuarios?.length > 0 && (
+                <section style={{ marginBottom: '56px' }}>
+                  <h3 style={{ fontSize: '23px', fontWeight: 'bold', marginBottom: '24px', color: '#ffffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    Usuários
+                  </h3>
+                  <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    {searchResults.usuarios.map(u => (
+                      <div 
+                        key={u.id_user} 
+                        onClick={() => navigate(`/profile/${u.id_user}`)} 
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '20px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s', width: '150px' }} 
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(-4px)'}} 
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'; e.currentTarget.style.transform = 'translateY(0)'}}
+                      >
+                        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '28px', fontWeight: 'bold', color: 'white', boxShadow: '0 8px 20px rgba(0,0,0,0.4)' }}>
+                          {u.imagem_url && u.imagem_url !== 'default_avatar.png' ? <img src={u.imagem_url} style={{width:'100%', height:'100%', objectFit:'cover'}} alt={u.username}/> : u.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ textAlign: 'center', width: '100%' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '15px', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.nome}</div>
+                          <div style={{ fontSize: '13px', color: '#9ca3af', marginTop: '4px' }}>@{u.username}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* NENHUM RESULTADO */}
+              {searchResults.albuns?.length === 0 && searchResults.artistas?.length === 0 && searchResults.usuarios?.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '80px 20px', color: '#9ca3af' }}>
+                  <Search size={48} style={{ opacity: 0.2, margin: '0 auto 16px auto' }} />
+                  <p style={{ fontSize: '18px' }}>Nenhum resultado encontrado para "{searchQuery}".</p>
+                  <p style={{ fontSize: '14px', opacity: 0.6, marginTop: '8px' }}>Tente pesquisar por outro álbum, ano, gênero ou usuário.</p>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -372,7 +470,7 @@ export default function Home({ user, onLogout }) {
 
 function HeroButton({ text, path }) {
   const [hover, setHover] = useState(false);
-  const navigate = useNavigate(); // hook para navegação
+  const navigate = useNavigate();
 
   return (
     <button

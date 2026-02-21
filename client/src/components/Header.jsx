@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, User, Flame, Globe, Sparkles, LogOut, LogIn, UserPlus, Settings, Heart, MessageCircle } from 'lucide-react';
+import { Search, Bell, User, Flame, Globe, Sparkles, LogOut, LogIn, UserPlus, Settings, Heart, MessageCircle, SlidersHorizontal } from 'lucide-react';
 import logoScorefy from '../assets/logoscorefy.png';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -112,20 +112,32 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
         
         {/* Busca */}
         {!hideSearch && (
-          <div style={{ position: 'relative' }}>
-            <input
-              type="text" placeholder="Buscar..."
-              onChange={(e) => onSearch?.(e.target.value)}
-              onFocus={() => setInputFocus(true)} onBlur={() => setInputFocus(false)}
-              style={{
-                backgroundColor: inputFocus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '9999px',
-                padding: '8px 16px 8px 40px', fontSize: '14px', width: inputFocus ? '240px' : '192px',
-                color: 'white', outline: 'none', transition: 'all 0.2s ease'
-              }}
-            />
-            <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: inputFocus ? 'white' : '#9ca3af', pointerEvents: 'none' }}>
-              <Search size={16} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text" placeholder="Buscar álbum, ano, gênero..."
+                onChange={(e) => onSearch?.(e.target.value)}
+                onFocus={() => setInputFocus(true)} onBlur={() => setInputFocus(false)}
+                style={{
+                  backgroundColor: inputFocus ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '9999px',
+                  padding: '8px 16px 8px 40px', fontSize: '14px', width: inputFocus ? '280px' : '220px',
+                  color: 'white', outline: 'none', transition: 'all 0.2s ease'
+                }}
+              />
+              <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: inputFocus ? 'white' : '#9ca3af', pointerEvents: 'none' }}>
+                <Search size={16} />
+              </div>
+            </div>
+            
+            {/* Filtro */}
+            <div 
+              title="A busca inteligente já filtra automaticamente por Ano (ex: 2023) e Gênero (ex: Rock)!" 
+              style={{ padding: '8px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af', cursor: 'help', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = 'white'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.color = '#9ca3af'; }}
+            >
+              <SlidersHorizontal size={18} />
             </div>
           </div>
         )}

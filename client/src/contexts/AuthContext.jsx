@@ -7,14 +7,14 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Verifica se já tem usuário salvo ao abrir o site
-        const storedUser = localStorage.getItem('user');
+        // Agora usamos a chave 'scorefy_user' para bater com o App.jsx
+        const storedUser = localStorage.getItem('scorefy_user');
         if (storedUser) {
             try {
                 setUser(JSON.parse(storedUser));
             } catch (e) {
                 console.error("Erro ao ler usuário", e);
-                localStorage.removeItem('user'); // Limpa se estiver corrompido
+                localStorage.removeItem('scorefy_user'); 
             }
         }
         setLoading(false);
@@ -22,12 +22,13 @@ export function AuthProvider({ children }) {
 
     const login = (userData) => {
         setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
+        // Padronizado para 'scorefy_user'
+        localStorage.setItem('scorefy_user', JSON.stringify(userData));
     };
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('user');
+        localStorage.removeItem('scorefy_user');
         window.location.href = '/login'; 
     };
 
@@ -38,5 +39,4 @@ export function AuthProvider({ children }) {
     );
 }
 
-// Hook personalizado para usar fácil
 export const useAuth = () => useContext(AuthContext);

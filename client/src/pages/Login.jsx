@@ -23,10 +23,21 @@ export default function Login({ onLogin }) {
       });
 
       const data = await response.json();
+      
+      console.log("DADOS QUE CHEGARAM DO PYTHON:", data); // Espião 1
 
       if (response.ok) {
+        console.log("LOGIN SUCESSO! ATUALIZANDO ESTADOS...");
+        
+        // 1. Atualiza o Contexto
         login(data.user); 
         
+        // 2. Avisa o App.jsx (importante para as rotas protegidas que você tem lá)
+        if (onLogin) {
+            onLogin(data.user);
+        }
+        
+        console.log("NAVEGANDO PARA HOME...");
         navigate('/'); 
       } else {
         setError(data.error || 'Erro ao fazer login');

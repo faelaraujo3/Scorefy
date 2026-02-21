@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, User, Flame, Globe, Sparkles, LogOut, LogIn, UserPlus, Settings, Heart, MessageCircle, SlidersHorizontal } from 'lucide-react';
+import { Search, Bell, User, Flame, Globe, Sparkles, LogOut, LogIn, UserPlus, Settings, Heart, MessageCircle, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import logoScorefy from '../assets/logoscorefy.png';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -22,6 +22,11 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
   const menuRef = useRef(null);
   const notifRef = useRef(null);
 
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const filterRef = useRef(null);
+
+  const [userAvatar, setUserAvatar] = useState(user?.imagem_url || 'default_avatar.png');
+
   const isActive = (path) => location.pathname === path;
 
   // Fecha os menus se clicar fora deles
@@ -29,10 +34,31 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) setShowMenu(false);
       if (notifRef.current && !notifRef.current.contains(event.target)) setShowNotifMenu(false);
+      if (filterRef.current && !filterRef.current.contains(event.target)) setShowFilterMenu(false);
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+
+  useEffect(() => {
+    if (user) {
+      fetch(`http://localhost:5000/api/users/${user.id_user}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.user && data.user.imagem_url) {
+            setUserAvatar(data.user.imagem_url);
+            
+            const localData = JSON.parse(localStorage.getItem('user'));
+            if (localData) {
+              localData.imagem_url = data.user.imagem_url;
+              localStorage.setItem('user', JSON.stringify(localData));
+            }
+          }
+        })
+        .catch(err => console.error("Erro ao buscar avatar:", err));
+    }
+  }, [user]);
 
   // --- LÓGICA DE NOTIFICAÇÕES ---
   const fetchNotifications = async () => {
@@ -80,6 +106,14 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
     if (showNotifMenu) setShowNotifMenu(false);
   };
 
+  // Aplica o filtro rápido na barra de pesquisa
+  const handleQuickFilter = (term) => {
+    const input = document.getElementById('search-input');
+    if (input) input.value = term;
+    if (onSearch) onSearch(term);
+    setShowFilterMenu(false); // Fecha o balão após escolher
+  };
+
   const unreadCount = notifications.filter(n => !n.lida).length;
 
   return (
@@ -115,6 +149,7 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ position: 'relative' }}>
               <input
+                id="search-input"
                 type="text" placeholder="Buscar álbum, ano, gênero..."
                 onChange={(e) => onSearch?.(e.target.value)}
                 onFocus={() => setInputFocus(true)} onBlur={() => setInputFocus(false)}
@@ -131,13 +166,84 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
             </div>
             
             {/* Filtro */}
-            <div 
-              title="A busca inteligente já filtra automaticamente por Ano (ex: 2023) e Gênero (ex: Rock)!" 
-              style={{ padding: '8px', borderRadius: '50%', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#9ca3af', cursor: 'help', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}
-              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = 'white'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.color = '#9ca3af'; }}
-            >
-              <SlidersHorizontal size={18} />
+            <div style={{ position: 'relative' }} ref={filterRef}>
+              <div 
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                style={{ 
+                  padding: '8px', borderRadius: '50%', 
+                  backgroundColor: showFilterMenu ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)', 
+                  border: '1px solid rgba(255,255,255,0.1)', 
+                  color: showFilterMenu ? 'white' : '#9ca3af', 
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  transition: 'all 0.2s' 
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.color = 'white'; }}
+                onMouseLeave={(e) => { if(!showFilterMenu) { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'; e.currentTarget.style.color = '#9ca3af'; } }}
+              >
+                <SlidersHorizontal size={18} />
+              </div>
+
+              {/* Menu Dropdown de Seletores Modernos */}
+              {showFilterMenu && (
+                <div style={{
+                  position: 'absolute', top: '48px', right: '0', width: '280px',
+                  backgroundColor: '#18181b', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '16px', padding: '20px', boxShadow: '0 20px 50px rgba(0,0,0,0.7)',
+                  zIndex: 100, animation: 'fadeIn 0.2s ease-out', display: 'flex', flexDirection: 'column', gap: '20px'
+                }}>
+                  
+                  <h4 style={{ margin: 0, fontSize: '15px', color: 'white', fontWeight: 'bold' }}>
+                    Filtros Rápidos
+                  </h4>
+                  
+                  {/* Seletor de Géneros */}
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Por Gênero</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                      {['Pop', 'Rock', 'Hip Hop', 'Indie', 'Skate Punk', 'Alternative Pop', 'Pop Rock', 'Indie Rock'].map(g => (
+                        <button 
+                          key={g} 
+                          onClick={() => handleQuickFilter(g)}
+                          style={{ 
+                            background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', 
+                            color: '#e5e7eb', padding: '6px 14px', borderRadius: '9999px', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'; e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)'; e.currentTarget.style.color = 'white'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#e5e7eb'; }}
+                        >
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Seletor de Anos*/}
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Por Ano</span>
+                    <select 
+                      onChange={(e) => {
+                        if (e.target.value) handleQuickFilter(e.target.value);
+                      }}
+                      style={{ 
+                        width: '100%', marginTop: '10px', backgroundColor: 'rgba(255,255,255,0.05)', 
+                        border: '1px solid rgba(255,255,255,0.1)', color: 'white', 
+                        padding: '10px 14px', borderRadius: '12px', fontSize: '14px', 
+                        outline: 'none', cursor: 'pointer', display: 'block', transition: 'border 0.2s'
+                      }}
+                      onFocus={e => e.target.style.borderColor = '#10b981'}
+                      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    >
+                      <option value="" style={{ color: 'black' }}>Selecione um ano...</option>
+                      {Array.from({ length: 71 }, (_, i) => 2025 - i).map(y => (
+                        <option key={y} value={y} style={{ color: 'black' }}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -202,7 +308,7 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
                           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)')}
                           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = notif.lida ? 'transparent' : 'rgba(255, 255, 255, 0.03)')}
                         >
-                          {/*  Ícone de Ação */}
+                          {/* Ícone de Ação */}
                           <div style={{ display: 'flex', justifyContent: 'flex-end', width: '32px', flexShrink: 0, paddingTop: '4px' }}>
                             {isLike ? (
                               <Heart size={26} fill="#f91880" color="#f91880" />
@@ -256,7 +362,7 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
           </div>
         )}
 
-        {/* AVATAR DO USUÁRIO */}
+        {/* AVATAR USUÁRIO */}
         <div style={{ position: 'relative' }} ref={menuRef}>
           <div
             onClick={toggleUserMenu}
@@ -268,16 +374,21 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
           >
             <div style={{
               width: '36px', height: '36px', borderRadius: '50%',
-              background: user ? 'linear-gradient(to top right, #3be7e7ff, #e770ffff)' : '#333', padding: '2px'
+              backgroundColor: '#222', border: '2px solid rgba(255,255,255,0.1)', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
             }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#121215', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                {user && user.imagem_url && user.imagem_url !== 'default_avatar.png' ? (
-                  <img src={user.imagem_url} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <User size={20} color={user ? 'white' : '#888'} />
-                )}
-              </div>
+              {userAvatar && userAvatar !== 'default_avatar.png' ? (
+                <img 
+                  src={userAvatar} 
+                  alt="User" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={(e) => { e.target.style.display = 'none'; }} 
+                />
+              ) : (
+                <User size={20} color={user ? 'white' : '#888'} />
+              )}
             </div>
+            
             {user && <span style={{ fontWeight: '600', fontSize: '14px', color: 'white', paddingRight: '4px' }}>{user.username}</span>}
           </div>
 

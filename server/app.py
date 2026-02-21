@@ -524,6 +524,7 @@ def update_user_profile(id_user):
     if 'nome' in data: campos_atualizar['nome'] = data['nome']
     if 'bio' in data: campos_atualizar['bio'] = data['bio']
     if 'localizacao' in data: campos_atualizar['localizacao'] = data['localizacao']
+    if 'imagem_url' in data: campos_atualizar['imagem_url'] = data['imagem_url']
     
     if 'albuns_favoritos' in data:
         favoritos = data['albuns_favoritos']

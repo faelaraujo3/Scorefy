@@ -123,7 +123,7 @@ def listar_albuns():
 def postar_review():
     data = request.json
     
-    # Converte tudo para o tipo correto para evitar erro de String vs Int
+    # Converte tudo para o tipo correto 
     try:
         id_user = int(data.get('id_user'))
         id_album = int(data.get('id_album'))
@@ -135,7 +135,6 @@ def postar_review():
     if not usuario:
         return jsonify({"error": "Usuário não encontrado"}), 404
 
-    # A trava agora vai funcionar porque estamos comparando INT com INT
     existente = criticas_col.find_one({"id_user": id_user, "id_album": id_album})
     if existente:
         return jsonify({"error": "Você já avaliou este álbum!"}), 400
@@ -155,9 +154,45 @@ def postar_review():
     return jsonify({"message": "Review publicada!"}), 201
 
 
+@app.route('/api/reviews/<review_id>', methods=['DELETE'])
+def deletar_review(review_id):
+    # softdelete: mantém os comentários, apaga o conteúdo e a nota
+    criticas_col.update_one(
+        {"_id": ObjectId(review_id)},
+        {"$set": {"excluida": True, "texto": "Esta review foi excluída pelo autor", "nota": 0}}
+    )
+    return jsonify({"message": "Review excluída"}), 200
+
+@app.route('/api/reviews/<review_id>', methods=['PUT'])
+def editar_review(review_id):
+    data = request.json
+    criticas_col.update_one(
+        {"_id": ObjectId(review_id)},
+        {"$set": {"texto": data.get('texto'), "nota": data.get('nota')}}
+    )
+    return jsonify({"message": "Review atualizada"}), 200
+
+@app.route('/api/reviews/<review_id>/responder/delete', methods=['POST'])
+def deletar_resposta_rota(review_id):
+    data = request.json
+    criticas_col.update_one(
+        {"_id": ObjectId(review_id)},
+        {"$pull": {"respostas": {"id_user": data['id_user'], "texto": data['texto']}}}
+    )
+    return jsonify({"status": "sucesso"}), 200
+
+@app.route('/api/reviews/<review_id>/responder/edit', methods=['PUT'])
+def editar_resposta_rota(review_id):
+    data = request.json
+    criticas_col.update_one(
+        {"_id": ObjectId(review_id), "respostas.id_user": data['id_user'], "respostas.texto": data['texto_antigo']},
+        {"$set": {"respostas.$.texto": data['novo_texto']}}
+    )
+    return jsonify({"status": "sucesso"}), 200
+
+
 @app.route('/api/albuns/<int:id_album>', methods=['GET'])
 def detalhes_album(id_album):
-    # 1. Busca o álbum
     album = albuns_col.find_one({"id_album": id_album}, {"_id": 0})
     if not album: return jsonify({"error": "Álbum não encontrado"}), 404
 
@@ -166,12 +201,26 @@ def detalhes_album(id_album):
         album["artist"] = artista_db["name"] if artista_db else "Desconhecido"
     else:
         album["artist"] = "Desconhecido"
+        
     reviews = list(criticas_col.find({"id_album": id_album}))
     notas = [r['nota'] for r in reviews if 'nota' in r]
     
     media = sum(notas) / len(notas) if notas else 0
     
-    for r in reviews: r['_id'] = str(r['_id'])
+    for r in reviews: 
+        r['_id'] = str(r['_id'])
+        
+        user_db = usuarios_col.find_one({"id_user": r["id_user"]})
+        if user_db:
+            r['imagem_url'] = user_db.get('imagem_url', 'default_avatar.png')
+            r['username'] = user_db.get('username') or user_db.get('nome')
+
+        if "respostas" in r:
+            for resp in r["respostas"]:
+                resp_user_db = usuarios_col.find_one({"id_user": resp.get("id_user")})
+                if resp_user_db:
+                    resp['imagem_url'] = resp_user_db.get('imagem_url', 'default_avatar.png')
+                    resp['username'] = resp_user_db.get('username') or resp_user_db.get('nome')
     
     return jsonify({
         "album": album, 

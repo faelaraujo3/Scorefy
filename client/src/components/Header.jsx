@@ -150,7 +150,7 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
             <div style={{ position: 'relative' }}>
               <input
                 id="search-input"
-                type="text" placeholder="Buscar álbum, ano, gênero..."
+                type="text" placeholder="Pesquisar..."
                 onChange={(e) => onSearch?.(e.target.value)}
                 onFocus={() => setInputFocus(true)} onBlur={() => setInputFocus(false)}
                 style={{

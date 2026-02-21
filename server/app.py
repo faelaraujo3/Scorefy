@@ -37,29 +37,50 @@ def registrar():
     email = data.get('email')
     senha = data.get('senha')
     nome = data.get('nome')
+    username = data.get('username') 
 
-    if not email or not senha or not nome:
-        return jsonify({"error": "E-mail, senha e nome são obrigatórios"}), 400
+    # 1. Validação de Username Único 
+    if usuarios_col.find_one({"username": username}):
+        return jsonify({"error": "Este @username já está em uso"}), 400
+    
+    # 2. Verificação de campos obrigatórios
+    if not email or not senha or not nome or not username:
+        return jsonify({"error": "E-mail, senha, nome e username são obrigatórios"}), 400
+    
+    # 3. Validação de E-mail Único
     if usuarios_col.find_one({"email": email}):
         return jsonify({"error": "E-mail já cadastrado!"}), 400
 
+    # Gerar ID sequencial para manter a organização
     ultimo_usuario = usuarios_col.find_one(sort=[("id_user", -1)])
     proximo_id = (ultimo_usuario["id_user"] + 1) if ultimo_usuario else 1
 
+    # Montagem do objeto final que vai para o banco
     novo_usuario = {
         "id_user": proximo_id,
         "email": email,
         "senha": senha,
-        "username": data.get('username') or nome.split()[0].lower(),
+        "username": username,
         "nome": nome,
         "bio": "",
         "localizacao": "",
-        "imagem_url": "default_avatar.png",
-        "albuns_favoritos": []
+        "imagem_url": "https://i.pravatar.cc/150",
+        "albuns_favoritos": [],
+        "notifications": []  # Adicionado para evitar erros no sistema de avisos
     }
+
+    # SALVA NO BANCO (Esta parte faltava no seu)
+    usuarios_col.insert_one(novo_usuario)
+
+    # ENVIA A RESPOSTA PARA O REACT 
+    return jsonify({
+        "message": "Conta criada com sucesso!", 
+        "id_user": proximo_id,
+        "username": username
+    }), 201
+    
     usuarios_col.insert_one(novo_usuario)
     return jsonify({"message": "Conta criada com sucesso!", "id_user": proximo_id}), 201
-
 # --- BUSCA E LISTAGEM (ATUALIZADA COM ANO) ---
 @app.route('/api/busca', methods=['GET'])
 def busca_global():
@@ -616,6 +637,13 @@ def detalhes_artista_por_nome(nome_artista):
         "media_geral": media_artista,
         "albuns": albuns
     }), 200
+
+@app.route('/api/profile/username/<username>', methods=['GET'])
+def get_profile_by_username(username):
+    user = db.users.find_one({"username": username}, {"_id": 0, "password": 0})
+    if not user:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+    return jsonify(user)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

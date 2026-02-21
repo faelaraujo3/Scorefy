@@ -36,7 +36,12 @@ db.artists.insert_many([
     {"id_artista": 19, "name": "Olivia Rodrigo", "bio": "Cantora e compositora americana conhecida por musicas emocionais e letras pessoais", "genre": "Pop", "country": "EUA", "formed_year": 2015, "image_url": "https://cdn-images.dzcdn.net/images/artist/245d3346a03388562d56ab5a63f6549d/1900x1900-000000-80-0-0.jpg"},
     {"id_artista": 20, "name": "Lil Nas X", "bio": "Cantor americano conhecido por musicas inovadoras e letras provocativas", "genre": "Pop", "country": "EUA", "formed_year": 2018, "image_url": "https://cdn-images.dzcdn.net/images/cover/a65e86966cfd34b2aa292856136ef9ac/0x1900-000000-80-0-0.jpg"},
     {"id_artista": 21, "name": "Harry Styles", "bio": "Cantor britanico conhecido por carreira solo e estilo pop rock", "genre": "Pop", "country": "Reino Unido", "formed_year": 2017, "image_url": "https://cdn-images.dzcdn.net/images/artist/1151dba9b3edc0633adf35b64c21713f/200x200.jpg"},
-    {"id_artista": 22, "name": "Addison Rae", "bio": "Artista pop/alternativa que ascendeu ao mainstream como influencer", "genre": "Pop", "country": "EUA", "formed_year": 2021, "image_url": "https://cdn-images.dzcdn.net/images/artist/a8bc8bbb055934154ffe5ab48e61d6d0/1000x1000-000000-80-0-0.jpg"}
+    {"id_artista": 22, "name": "Addison Rae", "bio": "Artista pop/alternativa que ascendeu ao mainstream como influencer", "genre": "Pop", "country": "EUA", "formed_year": 2021, "image_url": "https://cdn-images.dzcdn.net/images/artist/a8bc8bbb055934154ffe5ab48e61d6d0/1000x1000-000000-80-0-0.jpg"},
+    {"id_artista": 23, "name": "Lana Del Rey", "bio": "Cantora e compositora americana conhecida por seu estilo cinematográfico e letras poéticas", "genre": "Pop", "country": "EUA", "formed_year": 2012, "image_url": "https://cdn-images.dzcdn.net/images/artist/8994d3be1a59a72f887f1f8afd2d4c6c/1000x1000-000000-80-0-0.jpg"},
+    {"id_artista": 24, "name": "The Marias", "bio": "Banda americana de indie pop com sonoridade suave e influencias latinas", "genre": "Indie Pop", "country": "EUA", "formed_year": 2017, "image_url": "https://cdn-images.dzcdn.net/images/artist/9a81e875aa2689278b4ad8c385aacd12/1000x1000-000000-80-0-0.jpg"},
+    {"id_artista": 25, "name": "Grimes", "bio": "Cantora e produtora canadense conhecida por seu estilo experimental e letras provocativas", "genre": "Experimental", "country": "Canada", "formed_year": 2010, "image_url": "https://cdn-images.dzcdn.net/images/artist/8a207720e8bed18bab25883fba019dc7/500x500-000000-80-0-0.jpg"},
+    {"id_artista": 26, "name": "Bad Bunny", "bio": "Cantor porto riquenho de reggaeton e trap latino com grande impacto global", "genre": "Reggaeton", "country": "Porto Rico", "formed_year": 2016, "image_url": "https://ticketswap-image-cdn.b-cdn.net/public/202507/64916334-0a11-4feb-b0ca-86d2945ab157.jpg"}
+
 ])
 
 # 3. Povoamento de Álbuns (Completo)
@@ -520,10 +525,88 @@ db.albums.insert_many([
         "genre": "Pop",
         "description": "Album de estréia da artista revelação do Scorefy",
         "image": "https://cdn-images.dzcdn.net/images/cover/6925f0e9f34b95ce5781480b249fd86d/1000x1000-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 49,
+        "title": "Lust For Life",
+        "id_artista": 23,
+        "year": 2017,
+        "genre": "Alternative Pop",
+        "description": "Album que mistura pop moderno com influencias de musica dos anos 70 e 80",
+        "image": "https://cdn-images.dzcdn.net/images/cover/7120083b059299f380eb1fe3bca0eefb/1000x1000-000000-80-0-0.jpg"
+    },
+    
+    {
+        "id_album": 50,
+        "title": "Norman Fucking Rockwell",
+        "id_artista": 23,
+        "year": 2019,
+        "genre": "Alternative Pop",
+        "description": "Album aclamado pela critica com letras introspectivas e sonoridade sofisticada",
+        "image": "https://cdn-images.dzcdn.net/images/cover/c0f4f022fa51f13e877aae2e758e241d/1000x1000-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 51,
+        "title": "Chemtrails Over the Country Club",
+        "id_artista": 23,
+        "year": 2021,
+        "genre": "Alternative Pop",
+        "description": "Album que explora temas de identidade e pertencimento com sonoridade suave",
+        "image": "https://cdn-images.dzcdn.net/images/cover/bfcc4fdda18be0e2f6fecc3aeebebe6c/500x500-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 52,
+        "title": "Blue Banisters",
+        "id_artista": 23,
+        "year": 2021,
+        "genre": "Alternative Pop",
+        "description": "Album que apresenta uma sonoridade mais madura e introspectiva",
+        "image": "https://cdn-images.dzcdn.net/images/cover/c03cb054182a8e33a9588c8755f35d70/500x500-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 53,
+        "title": "Art Angels",
+        "id_artista": 25,
+        "year": 2015,
+        "genre": "Experimental",
+        "description": "Album que mistura pop, eletrônica e elementos experimentais com letras provocativas",
+        "image": "https://cdn-images.dzcdn.net/images/cover/6a7fbeeb7632c81774d13d2bd0cc0f0b/1000x1000-000000-80-0-0.jpg"
+    },
+
+    { 
+        "id_album": 54,
+        "title": "Miss Anthropocene",
+        "id_artista": 25,
+        "year": 2020,
+        "genre": "Experimental",
+        "description": "Album que explora temas de identidade e feminilidade com sonoridade inovadora",
+        "image": "https://cdn-images.dzcdn.net/images/cover/b069393ca5d13fea704e59d548d2c46d/500x500-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 55,
+        "title": "The Submarine",
+        "id_artista": 24,
+        "year": 2024,
+        "genre": "Indie Pop",
+        "description": "Album de estréia da banda americana de indie pop The Marias, com sonoridade suave e influências latinas",
+        "image": "https://cdn-images.dzcdn.net/images/cover/574bd156ad04b9af443cdf6775cfa8c3/1000x1000-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 56,
+        "title": "DeBÍ TiRAR MáS FOToS",
+        "id_artista": 26,
+        "year": 2024,
+        "genre": "Latin Pop",
+        "description": "Álbum do Bad Bunny que honra suas raízes porto-riquenhas e mistura reggaeton, trap latino e influências de música tradicional, consolidando seu status como um dos artistas mais inovadores e influentes da música latina contemporânea",
+        "image": "https://cdn-images.dzcdn.net/images/cover/d98eaccfbb945bdf68241d6de7fe6a49/500x500-000000-80-0-0.jpg"
     }
-
 ])
-
 
 
 # 4. Povoamento de Usuário (Apenas para o Rafael testar o Profile)
@@ -536,7 +619,7 @@ db.users.insert_one({
     "bio": "Estudante de SI na UFOP",
     "localizacao": "Joao Monlevade MG",
     "imagem_url": "https://i.pravatar.cc/150",
-    "albuns_favoritos": [1, 43]  # no máximo 5
+    "albuns_favoritos": [1, 43]  
 })
 
 print("Banco resetado e povoado com sucesso!")

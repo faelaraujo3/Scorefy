@@ -4,6 +4,7 @@ from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
 from bson import ObjectId
+
 app = Flask(__name__)
 CORS(app)
 
@@ -66,8 +67,11 @@ def registrar():
         "localizacao": "",
         "imagem_url": "",
         "albuns_favoritos": [],
-        "notifications": []  # Adicionado para evitar erros no sistema de avisos
+        "notifications": [],  # Adicionado para evitar erros no sistema de avisos
+        "seguidores": [], # Lista de IDs de quem segue este usuário
+        "seguindo": []    # Lista de IDs de quem este usuário segue
     }
+    
 
     # SALVA NO BANCO (Esta parte faltava no seu)
     usuarios_col.insert_one(novo_usuario)
@@ -79,8 +83,6 @@ def registrar():
         "username": username
     }), 201
     
-    usuarios_col.insert_one(novo_usuario)
-    return jsonify({"message": "Conta criada com sucesso!", "id_user": proximo_id}), 201
 # --- BUSCA E LISTAGEM (ATUALIZADA COM ANO) ---
 @app.route('/api/busca', methods=['GET'])
 def busca_global():
@@ -583,7 +585,7 @@ def get_user_profile(id_user):
                 album_data["artist"] = art["name"] if art else ""
             review["album_info"] = album_data
 
-    return jsonify({"user": usuario, "favorites": favoritos_detalhados, "reviews": user_reviews}), 200
+    return jsonify({"user": usuario, "favorites": favoritos_detalhados, "reviews": user_reviews, "seguidores": usuario.get("seguidores", []), "seguindo": usuario.get("seguindo", []) }), 200
 
 # PATCH PERFIL
 @app.route('/api/users/<int:id_user>', methods=['PATCH'])
@@ -644,6 +646,69 @@ def get_profile_by_username(username):
     if not user:
         return jsonify({"error": "Usuário não encontrado"}), 404
     return jsonify(user)
+    
+
+@app.route('/api/users/<int:id_alvo>/follow', methods=['POST'])
+def follow_user(id_alvo):
+    data = request.json
+    id_logado = data.get('id_user_logado')
+
+    if not id_logado:
+        return jsonify({"error": "Usuário não identificado"}), 400
+    
+    if id_logado == id_alvo:
+        return jsonify({"error": "Você não pode seguir a si mesmo"}), 400
+
+    # Busca os usuários no banco
+    user_alvo = db.users.find_one({"id_user": id_alvo})
+    user_logado = db.users.find_one({"id_user": id_logado})
+
+    if not user_alvo or not user_logado:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    # LÓGICA: Se já segue, remove (Unfollow). Se não segue, adiciona (Follow).
+    if id_logado in user_alvo.get('seguidores', []):
+        # UNFOLLOW
+        db.users.update_one({"id_user": id_alvo}, {"$pull": {"seguidores": id_logado}})
+        db.users.update_one({"id_user": id_logado}, {"$pull": {"seguindo": id_alvo}})
+        return jsonify({"status": "unfollowed", "message": "Você deixou de seguir este usuário"}), 200
+    else:
+        # FOLLOW
+        db.users.update_one({"id_user": id_alvo}, {"$push": {"seguidores": id_logado}})
+        db.users.update_one({"id_user": id_logado}, {"$push": {"seguindo": id_alvo}})
+        
+        # --- SISTEMA DE NOTIFICAÇÃO ---
+        # Criamos um aviso para o usuário que acabou de ser seguido
+        notificacao = {
+            "para_id_user": id_alvo, 
+            "mensagem": f"@{user_logado['username']} começou a te seguir!",
+            "lida": False,
+            "tipo": "follow",
+            "imagem_url": user_logado.get('imagem_url', 'default_avatar.png'), 
+            "data": datetime.now().strftime("%d/%m/%Y %H:%M") # Formatado para facilitar a exibição
+        }
+        db.notifications.insert_one(notificacao)
+        
+        return jsonify({"status": "followed", "message": "Agora você está seguindo este usuário"}), 200
+     
+@app.route('/api/users/<int:id_user>/rede', methods=['GET'])
+def buscar_rede_social(id_user):
+    usuario = usuarios_col.find_one({"id_user": id_user})
+    if not usuario:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    # Busca detalhes (nome, username, foto) de todos os seguidores e seguindo
+    def buscar_detalhes(lista_ids):
+        return list(usuarios_col.find(
+            {"id_user": {"$in": lista_ids}},
+            {"_id": 0, "id_user": 1, "username": 1, "nome": 1, "imagem_url": 1}
+        ))
+
+    return jsonify({
+        "seguidores": buscar_detalhes(usuario.get("seguidores", [])),
+        "seguindo": buscar_detalhes(usuario.get("seguindo", []))
+    }), 200
+    
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

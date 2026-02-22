@@ -718,7 +718,10 @@ db.users.insert_one({
     "bio": "Estudante de SI na UFOP",
     "localizacao": "Joao Monlevade MG",
     "imagem_url": "https://i.pravatar.cc/150",
-    "albuns_favoritos": [1, 43]  
+    "albuns_favoritos": [1, 43],
+     "seguidores": [],
+    "seguindo": [],
+    "notifications": [] 
 })
 
 print("Banco resetado e povoado com sucesso!")

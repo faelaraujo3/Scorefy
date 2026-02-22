@@ -5,6 +5,7 @@ import { ArrowRight, Lock, Mail, User } from 'lucide-react';
 
 export default function Register() {
   const [nome, setNome] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
@@ -19,7 +20,7 @@ export default function Register() {
       const response = await fetch('http://localhost:5000/api/registrar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, email, senha }),
+        body: JSON.stringify({ nome, username, email, senha }),
       });
 
       if (response.ok) {
@@ -66,6 +67,19 @@ export default function Register() {
               style={styles.input} 
               required
             />
+          </div>
+          
+          {/* input do username (O @ do perfil) */}
+           <div style={styles.inputGroup}>
+            <span style={{ color: '#9ca3af', fontWeight: 'bold' }}>@</span>
+             <input 
+              type="text" 
+              placeholder="Seu nome de usuário" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={styles.input} 
+              required
+             />
           </div>
 
           {/* input do email */}

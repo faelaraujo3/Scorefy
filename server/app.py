@@ -41,7 +41,7 @@ def registrar():
 
     # 1. Validação de Username Único 
     if usuarios_col.find_one({"username": username}):
-        return jsonify({"error": "Este @username já está em uso"}), 400
+        return jsonify({"error": "Este nome de usuário já está em uso"}), 400
     
     # 2. Verificação de campos obrigatórios
     if not email or not senha or not nome or not username:

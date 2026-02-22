@@ -64,7 +64,7 @@ def registrar():
         "nome": nome,
         "bio": "",
         "localizacao": "",
-        "imagem_url": "https://i.pravatar.cc/150",
+        "imagem_url": "",
         "albuns_favoritos": [],
         "notifications": []  # Adicionado para evitar erros no sistema de avisos
     }

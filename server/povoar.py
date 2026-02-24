@@ -1,10 +1,10 @@
 from pymongo import MongoClient
 
-# Conecta ao MongoDB (localhost para rodar no seu Debian)
+# Conecta ao MongoDB 
 client = MongoClient("mongodb://localhost:27017/")
 db = client["scorefy_db"]
 
-# 1. Limpa os dados antigos
+# Primeiro de tudo resetamos os dados do banco
 db.users.delete_many({})
 db.albums.delete_many({})
 db.artists.delete_many({})
@@ -12,8 +12,9 @@ db.reviews.delete_many({})
 db.playlists.delete_many({})
 db.reviews.delete_many({})
 db.notifications.delete_many({})
+db.lists.delete_many({})
 
-# 2. Povoamento de Artistas (Completo)
+# Povoamento de Artistas
 db.artists.insert_many([
     {"id_artista": 1, "name": "Linkin Park", "bio": "Banda de Nu Metal americana formada em California", "genre": "Nu Metal", "country": "EUA", "formed_year": 1996, "image_url": "https://cdn-images.dzcdn.net/images/artist/cc73698ecf7d3ce03f3b1079888d9c03/1900x1900-000000-80-0-0.jpg"},
     {"id_artista": 2, "name": "Billie Eilish", "bio": "Cantora e compositora de pop alternativo norte americana", "genre": "Pop", "country": "EUA", "formed_year": 2015, "image_url": "https://cdn-images.dzcdn.net/images/artist/8eab1a9a644889aabaca1e193e05f984/500x500.jpg"},
@@ -45,7 +46,7 @@ db.artists.insert_many([
 
 ])
 
-# 3. Povoamento de Álbuns (Completo)
+# Povoamento de Álbuns (feitos de um a um com capas do deezer)
 db.albums.insert_many([
 
     {
@@ -731,20 +732,144 @@ db.albums.insert_many([
 ])
 
 
-# 4. Povoamento de Usuário (Apenas para o Rafael testar o Profile)
-db.users.insert_one({
-    "id_user": 1,
-    "email": "emerson@ufop.br",
-    "senha": "123",
-    "username": "EmersonS2",
-    "nome": "Emerson Ataide",
-    "bio": "Estudante de SI na UFOP",
-    "localizacao": "Joao Monlevade MG",
-    "imagem_url": "https://i.pinimg.com/736x/97/93/29/979329dc7dd788331cee69e96a43e9fa.jpg",
-    "albuns_favoritos": [1, 43],
-     "seguidores": [],
-    "seguindo": [],
-    "notifications": [] 
-})
+prefs = {"curtidas": True, "respostas": True, "seguidores": True}
+
+usuarios = [
+    {
+        "id_user": 1, "email": "emerson@ufop.br", "senha": "123", "username": "EmersonS2", 
+        "nome": "Emerson Ataide", "bio": "Estudante de SI na UFOP. Amante de Nu Metal e Pop.", 
+        "localizacao": "Joao Monlevade MG", "imagem_url": "https://i.pinimg.com/736x/97/93/29/979329dc7dd788331cee69e96a43e9fa.jpg",
+        "albuns_favoritos": [1, 43, 55], "seguidores": [2, 3, 4, 5], "seguindo": [2, 3, 6, 7], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 2, "email": "maria@gmail.com", "senha": "123", "username": "marillu", 
+        "nome": "Maria Silva", "bio": "apenas uma garota vivendo num mundo pop", 
+        "localizacao": "São Paulo, SP", "imagem_url": "https://i.pinimg.com/1200x/1a/a2/a5/1aa2a568ec5f4d721fa7f7bd5dda915b.jpg",
+        "albuns_favoritos": [45, 44, 21], "seguidores": [1, 3, 8], "seguindo": [1, 4, 5], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 3, "email": "joao.indie@outlook.com", "senha": "123", "username": "joaoindie", 
+        "nome": "João Pedro", "bio": "fones de ouvido 24/7.", 
+        "localizacao": "Rio de Janeiro, RJ", "imagem_url": "https://i.pinimg.com/736x/9f/c5/6f/9fc56f19a167e5ea1b591581f1d2e355.jpg",
+        "albuns_favoritos": [55, 39, 11], "seguidores": [1, 2], "seguindo": [1, 2, 9], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 4, "email": "analu@yahoo.com", "senha": "123", "username": "ana_lu", 
+        "nome": "Ana Luiza", "bio": "tudo que eu ouço vira minha personalidade.", 
+        "localizacao": "Belo Horizonte, MG", "imagem_url": "https://i.pinimg.com/736x/8e/87/ad/8e87ad9b1fb4f4cf3fc5820b0ad058f2.jpg",
+        "albuns_favoritos": [67, 19, 23], "seguidores": [2], "seguindo": [1], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 5, "email": "lucas.rock@gmail.com", "senha": "123", "username": "lucas_rock", 
+        "nome": "Lucas Martins", "bio": "rock não morreu.", 
+        "localizacao": "Curitiba, MG", "imagem_url": "https://i.pinimg.com/736x/fe/e4/57/fee457a40374415ef1037034f3050341.jpg",
+        "albuns_favoritos": [58, 2, 14], "seguidores": [1, 2], "seguindo": [1], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 6, "email": "bea.music@hotmail.com", "senha": "123", "username": "beaangel", 
+        "nome": "Beatriz Costa", "bio": "opinando sobre álbuns que ninguém pediu.", 
+        "localizacao": "Salvador, BA", "imagem_url": "https://i.pinimg.com/1200x/ae/ef/53/aeef53aed5cd212048f6a9ad9d9357c4.jpg",
+        "albuns_favoritos": [24, 44], "seguidores": [1], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 7, "email": "carlosdj@gmail.com", "senha": "123", "username": "ccarlosdj", 
+        "nome": "Carlos Eduardo", "bio": "beats & synths", 
+        "localizacao": "Florianópolis, PR", "imagem_url": "https://i.pinimg.com/736x/c4/d5/35/c4d53514d7eceb2eb211807066a101a2.jpg",
+        "albuns_favoritos": [56, 64], "seguidores": [1], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 8, "email": "fe.lima@uol.com.br", "senha": "123", "username": "fernanda_", 
+        "nome": "Fernanda Lima", "bio": "só pop de qualidade.", 
+        "localizacao": "Recife, BA", "imagem_url": "https://i.pinimg.com/1200x/1a/38/8f/1a388fdc7362b6f88176096b14922ef8.jpg",
+        "albuns_favoritos": [67, 55], "seguidores": [], "seguindo": [2], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 9, "email": "rafa.beats@gmail.com", "senha": "123", "username": "rafael_beats", 
+        "nome": "Rafael Alves", "bio": "trap e rap todos os dias.", 
+        "localizacao": "Porto Alegre, SC", "imagem_url": "https://i.pinimg.com/736x/fb/d8/3e/fbd83e95f124f538e66234ffef826a24.jpg",
+        "albuns_favoritos": [64, 56], "seguidores": [3], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 10, "email": "julia.mendes@gmail.com", "senha": "123", "username": "julhinha", 
+        "nome": "Julia Mendes", "bio": "aesthetic listener", 
+        "localizacao": "Brasília, DF", "imagem_url": "https://i.pinimg.com/736x/f3/ce/b1/f3ceb1ca0bfcc0b17706945ff72ffad5.jpg",
+        "albuns_favoritos": [24, 67], "seguidores": [], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
+    },
+    {
+        "id_user": 11, "email": "gabriel.t@gmail.com", "senha": "123", "username": "tavinho", 
+        "nome": "Gabriel Tavares", "bio": "chorando com a billie", 
+        "localizacao": "Manaus, RS", "imagem_url": "https://i.pinimg.com/736x/55/37/cd/5537cd22b6075fb4c40bf479a2a524ae.jpg",
+        "albuns_favoritos": [45], "seguidores": [], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
+    }
+]
+
+db.users.insert_many(usuarios)
+
+# Povoamento de reviews
+
+def pega_nome(id_user):
+    for u in usuarios:
+        if u["id_user"] == id_user:
+            return u["username"]
+
+reviews = [
+    {"id_user": 2, "id_album": 55, "nota": 5.0, "texto": "obra prima, simplesmente sem defeitos. to apaixonada pelas melodias. the marias salvou o ano!!", "curtidas": [1, 3, 4], "respostas": [], "data_postagem": "2026-02-23 14:30:00"},
+    {"id_user": 4, "id_album": 55, "nota": 4.5, "texto": "vibe muito boa, perfeito pra ouvir no fone voltando pra casa na chuva.", "curtidas": [2, 10], "respostas": [], "data_postagem": "2026-02-22 18:15:00"},
+    {"id_user": 8, "id_album": 55, "nota": 5.0, "texto": "cinematográfico demais, maria nunca erra! escutem run your mouth agora", "curtidas": [2], "respostas": [], "data_postagem": "2026-02-21 09:20:00"},
+    
+    {"id_user": 3, "id_album": 24, "nota": 4.0, "texto": "marina sena servindo vocais como sempre. a estética do album ta linda", "curtidas": [6, 10], "respostas": [], "data_postagem": "2026-02-23 20:00:00"},
+    {"id_user": 6, "id_album": 24, "nota": 5.0, "texto": "HINOOOO DO VERAO!!! não paro de ouvir a faixa 2, repeat eterno", "curtidas": [1, 8], "respostas": [], "data_postagem": "2026-02-20 11:45:00"},
+    {"id_user": 10, "id_album": 24, "nota": 3.5, "texto": "gostei mas achei q o vicio inerente era um pouco melhor kkkk mesmo assim ta na minha playlist", "curtidas": [], "respostas": [], "data_postagem": "2026-02-22 13:10:00"},
+    
+    {"id_user": 2, "id_album": 45, "nota": 5.0, "texto": "billie me destruiu nesse album, que produção absurda. the greatest é a melhor musica da carreira dela", "curtidas": [1, 4, 11], "respostas": [], "data_postagem": "2026-02-24 00:10:00"},
+    {"id_user": 5, "id_album": 45, "nota": 4.5, "texto": "muito bom, o finneas é um genio tbm na produçao. rock vibes no final de umas faixas me pegou de surpresa", "curtidas": [2, 7], "respostas": [], "data_postagem": "2026-02-19 16:50:00"},
+    {"id_user": 11, "id_album": 45, "nota": 5.0, "texto": "l'amour de ma vie me fez chorar no banho hoje de manha 10/10", "curtidas": [1, 2], "respostas": [], "data_postagem": "2026-02-23 08:30:00"},
+    
+    {"id_user": 7, "id_album": 56, "nota": 5.0, "texto": "EL CONEJO MALO NUNCA FALHA!!! album perfeito pro role", "curtidas": [9], "respostas": [], "data_postagem": "2026-02-23 23:45:00"},
+    {"id_user": 9, "id_album": 56, "nota": 4.5, "texto": "trap pesadissimo, muito bom de vdd", "curtidas": [7, 1], "respostas": [], "data_postagem": "2026-02-21 21:15:00"},
+    {"id_user": 1, "id_album": 56, "nota": 4.0, "texto": "curti bastante os beats, a produção tá insana. não é meu estilo favorito mas admito a genialidade", "curtidas": [7], "respostas": [], "data_postagem": "2026-02-22 19:20:00"},
+    
+    {"id_user": 4, "id_album": 67, "nota": 5.0, "texto": "ela sabe q é a maioral do uk garage ne. samples de 2000 mt bem usados", "curtidas": [8, 10], "respostas": [], "data_postagem": "2026-02-23 17:00:00"},
+    {"id_user": 8, "id_album": 67, "nota": 4.5, "texto": "viciante!!! a unica coisa ruim é que as musicas deviam ser mais longas 😭😭", "curtidas": [4], "respostas": [], "data_postagem": "2026-02-22 10:40:00"},
+    {"id_user": 10, "id_album": 67, "nota": 4.0, "texto": "muito fofinha a estética, super vibe y2k", "curtidas": [], "respostas": [], "data_postagem": "2026-02-18 14:55:00"},
+
+    {"id_user": 2, "id_album": 44, "nota": 5.0, "texto": "A GAGA VOLTOU PRO POP!!!! ESTAMOS SALVOS", "curtidas": [1, 3, 4, 6], "respostas": [], "data_postagem": "2026-02-24 01:20:00"},
+    {"id_user": 6, "id_album": 44, "nota": 4.0, "texto": "serviu conceito, coreografia e vocais pra ninguem botar defeito", "curtidas": [2], "respostas": [], "data_postagem": "2026-02-23 12:00:00"},
+    {"id_user": 3, "id_album": 44, "nota": 5.0, "texto": "pop perfection. aoty. não aceito menos que grammys.", "curtidas": [2, 6, 8], "respostas": [], "data_postagem": "2026-02-22 22:30:00"},
+
+    {"id_user": 5, "id_album": 14, "nota": 5.0, "texto": "hayley williams eu te amo entenda. as guitarras aqui tao espetaculares", "curtidas": [1, 3], "respostas": [], "data_postagem": "2026-02-20 09:10:00"},
+    {"id_user": 1, "id_album": 14, "nota": 4.5, "texto": "baita album de rock alternativo! a bateria na faixa titulo é genial", "curtidas": [5], "respostas": [], "data_postagem": "2026-02-19 18:45:00"},
+
+    {"id_user": 7, "id_album": 64, "nota": 4.0, "texto": "uma viagem sonora inexplicável", "curtidas": [9], "respostas": [], "data_postagem": "2026-02-18 20:30:00"},
+    {"id_user": 9, "id_album": 64, "nota": 5.0, "texto": "travis não brinca em serviço ne pai. melhor experiencia musical q tive esse ano", "curtidas": [1, 7], "respostas": [], "data_postagem": "2026-02-23 21:50:00"},
+]
+
+# Inserindo o username nas reviews antes de salvar
+for r in reviews:
+    r["username"] = pega_nome(r["id_user"])
+
+db.reviews.insert_many(reviews)
+
+# incluindo playlists pro usuario do emerson
+listas = [
+    {
+        "id_user": 1,
+        "titulo": "Nu Metal e classicos",
+        "descricao": "Aquelas pedradas que nunca envelhecem.",
+        "capa_personalizada": "https://i.pinimg.com/736x/f6/39/fb/f639fb2b8eb2c11d4a78650e2470d37e.jpg",
+        "albuns": [46, 47, 60, 61, 3, 7], 
+        "data_criacao": "2026-02-20 15:00:00"
+    },
+    {
+        "id_user": 1,
+        "titulo": "música de chuveiro",
+        "descricao": "gen z.",
+        "capa_personalizada": "https://i.pinimg.com/736x/9e/17/7c/9e177c7df4bc92d09c2397a9fa7f4e34.jpg",
+        "albuns": [45, 15, 42, 22, 55, 67], 
+        "data_criacao": "2026-02-23 10:30:00"
+    }
+]
+
+db.lists.insert_many(listas)
 
 print("Banco resetado e povoado com sucesso!")

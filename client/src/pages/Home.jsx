@@ -121,7 +121,7 @@ export default function Home({ user, onLogout }) {
       overlay: 'linear-gradient(90deg, #a50909ff 10%, #b824119d 30%, rgba(143, 11, 11, 0) 70%)',
       desc: 'É altamente ilegal ignorar esse álbum.',
       btnText: 'Visitar Álbum',
-      path: '/album/48',
+      path: '/album/67',
     },
     {
       id: 4,
@@ -163,7 +163,7 @@ export default function Home({ user, onLogout }) {
     overlay: 'linear-gradient(90deg, #0190b4ea 10%, #2dbfca63 40%, rgba(11, 139, 143, 0) 60%)',
     desc: 'Zara Larsson traz o Pop Refrescante de verão de volta aos holofotes de um sol eterno.',
     btnText: 'Visitar Álbum',
-    path: '/album/48',
+    path: '/album/68',
     }
   ];
 

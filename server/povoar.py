@@ -39,7 +39,9 @@ db.artists.insert_many([
     {"id_artista": 22, "name": "Addison Rae", "bio": "Artista pop/alternativa que ascendeu ao mainstream como influencer", "genre": "Pop", "country": "EUA", "formed_year": 2021, "image_url": "https://cdn-images.dzcdn.net/images/artist/a8bc8bbb055934154ffe5ab48e61d6d0/1000x1000-000000-80-0-0.jpg"},
     {"id_artista": 23, "name": "Lana Del Rey", "bio": "Cantora e compositora americana conhecida por seu estilo cinematográfico e letras poéticas", "genre": "Pop", "country": "EUA", "formed_year": 2012, "image_url": "https://cdn-images.dzcdn.net/images/artist/8994d3be1a59a72f887f1f8afd2d4c6c/1000x1000-000000-80-0-0.jpg"},
     {"id_artista": 24, "name": "The Marias", "bio": "Banda americana de indie pop com sonoridade suave e influencias latinas", "genre": "Indie Pop", "country": "EUA", "formed_year": 2017, "image_url": "https://cdn-images.dzcdn.net/images/artist/9a81e875aa2689278b4ad8c385aacd12/1000x1000-000000-80-0-0.jpg"},
-    {"id_artista": 25, "name": "Grimes", "bio": "Cantora e produtora canadense conhecida por seu estilo experimental e letras provocativas", "genre": "Experimental", "country": "Canada", "formed_year": 2010, "image_url": "https://cdn-images.dzcdn.net/images/artist/8a207720e8bed18bab25883fba019dc7/500x500-000000-80-0-0.jpg"}
+    {"id_artista": 25, "name": "Grimes", "bio": "Cantora e produtora canadense conhecida por seu estilo experimental e letras provocativas", "genre": "Experimental", "country": "Canada", "formed_year": 2010, "image_url": "https://cdn-images.dzcdn.net/images/artist/8a207720e8bed18bab25883fba019dc7/500x500-000000-80-0-0.jpg"},
+    {"id_artista": 26, "name": "PinkPantheress", "bio": "Cantora, produtora e compositora britânica conhecida por música drum-n-bass e estilos de garagem do Reino Unido", "genre": "UK Garage", "country": "Reino Unido", "formed_year": 2021, "image_url": "https://i.scdn.co/image/ab6761610000e5eb6bf10d74063b45938f5d8656"},
+    {"id_artista": 27, "name": "Zara Larsson", "bio": "Cantora sueca conhecida por seu pop cativante e letras empoderadoras", "genre": "Pop", "country": "Suécia", "formed_year": 2013, "image_url": "https://i.scdn.co/image/ab6761610000e5eb11be9310ef4b23734c13b5c8"},
 
 ])
 
@@ -704,6 +706,27 @@ db.albums.insert_many([
         "genre": "Axé",
         "description": "Álbum icônico que dominou o Brasil com energia pura, se tornando um clássico instantâneo do Carnaval",
         "image": "https://cdn-images.dzcdn.net/images/cover/f3acd5859592d26f1b11dc44ca49e267/0x1900-000000-80-0-0.jpg"
+    },
+
+    {
+        "id_album": 67,
+        "title": "Fancy That",
+        "id_artista": 26,
+        "year": 2025,
+        "genre": "Pop",
+        "description": "Álbum fresh que mistura pop contemporâneo com música de garagem do Reino Unido.",
+        "image": "https://cdn-images.dzcdn.net/images/cover/0b8720478ef28aedf91af614d36721ec/1000x1000-000000-80-0-0.jpg"
+
+    },
+
+    {
+        "id_album": 68,
+        "title": "Midnight Sun",
+        "id_artista": 27,
+        "year": 2025,
+        "genre": "Pop",
+        "description": "Álbum que traz o pop fresco e vibrante do verão de volta aos holofotes.",
+        "image": "https://cdn-images.dzcdn.net/images/cover/19bf09a63824955c504abea3f958c584/1000x1000-000000-80-0-0.jpg"
     }
 ])
 
@@ -717,7 +740,7 @@ db.users.insert_one({
     "nome": "Emerson Ataide",
     "bio": "Estudante de SI na UFOP",
     "localizacao": "Joao Monlevade MG",
-    "imagem_url": "https://i.pravatar.cc/150",
+    "imagem_url": "https://i.pinimg.com/736x/97/93/29/979329dc7dd788331cee69e96a43e9fa.jpg",
     "albuns_favoritos": [1, 43],
      "seguidores": [],
     "seguindo": [],

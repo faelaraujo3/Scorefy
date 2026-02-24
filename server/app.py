@@ -3,6 +3,7 @@ from pymongo import MongoClient
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import os
+import re
 from bson import ObjectId
 
 app = Flask(__name__)
@@ -19,6 +20,7 @@ artistas_col = db["artists"]
 albuns_col = db["albums"]
 criticas_col = db["reviews"]
 notificacoes_col = db["notifications"]
+listas_col = db["lists"]
 
 # --- ROTA DE LOGIN ---
 @app.route('/api/login', methods=['POST'])
@@ -40,23 +42,18 @@ def registrar():
     nome = data.get('nome')
     username = data.get('username') 
 
-    # 1. Validação de Username Único 
     if usuarios_col.find_one({"username": username}):
         return jsonify({"error": "Este nome de usuário já está em uso"}), 400
     
-    # 2. Verificação de campos obrigatórios
     if not email or not senha or not nome or not username:
         return jsonify({"error": "E-mail, senha, nome e username são obrigatórios"}), 400
     
-    # 3. Validação de E-mail Único
     if usuarios_col.find_one({"email": email}):
         return jsonify({"error": "E-mail já cadastrado!"}), 400
 
-    # Gerar ID sequencial para manter a organização
     ultimo_usuario = usuarios_col.find_one(sort=[("id_user", -1)])
     proximo_id = (ultimo_usuario["id_user"] + 1) if ultimo_usuario else 1
 
-    # Montagem do objeto final que vai para o banco
     novo_usuario = {
         "id_user": proximo_id,
         "email": email,
@@ -67,33 +64,33 @@ def registrar():
         "localizacao": "",
         "imagem_url": "",
         "albuns_favoritos": [],
-        "notifications": [],  # Adicionado para evitar erros no sistema de avisos
-        "seguidores": [], # Lista de IDs de quem segue este usuário
-        "seguindo": []    # Lista de IDs de quem este usuário segue
+        "notifications": [], 
+        "seguidores": [],
+        "seguindo": [],
+        "pref_notificacoes": {
+            "curtidas": True,
+            "respostas": True,
+            "seguidores": True
+        }
     }
     
-
-    # SALVA NO BANCO (Esta parte faltava no seu)
     usuarios_col.insert_one(novo_usuario)
 
-    # ENVIA A RESPOSTA PARA O REACT 
     return jsonify({
         "message": "Conta criada com sucesso!", 
         "id_user": proximo_id,
         "username": username
     }), 201
     
-# --- BUSCA E LISTAGEM (ATUALIZADA COM ANO) ---
+# --- BUSCA E LISTAGEM com ano genero etc ---
 @app.route('/api/busca', methods=['GET'])
 def busca_global():
     termo = request.args.get('q', '')
     if not termo:
         return jsonify({"artistas": [], "albuns": [], "usuarios": []}), 200
 
-    # Busca Artistas pelo nome
     artistas = list(artistas_col.find({"name": {"$regex": termo, "$options": "i"}}, {"_id": 0}))
 
-    #  Prepara o filtro de busca para Álbuns (Título ou Gênero)
     filtro_albuns = {
         "$or": [
             {"title": {"$regex": termo, "$options": "i"}},
@@ -101,7 +98,6 @@ def busca_global():
         ]
     }
 
-    # Tenta converter o termo para número (para buscar por ANO)
     try:
         ano_busca = int(termo)
         filtro_albuns["$or"].append({"year": ano_busca})
@@ -120,7 +116,6 @@ def busca_global():
         artista_db = artistas_col.find_one({"id_artista": album.get("id_artista")})
         album["artist"] = artista_db["name"] if artista_db else "Desconhecido"
 
-    # Busca Usuários (por nome ou username)
     usuarios = list(usuarios_col.find({
         "$or": [
             {"username": {"$regex": termo, "$options": "i"}},
@@ -146,7 +141,6 @@ def listar_albuns():
 def postar_review():
     data = request.json
     
-    # Converte tudo para o tipo correto 
     try:
         id_user = int(data.get('id_user'))
         id_album = int(data.get('id_album'))
@@ -176,10 +170,8 @@ def postar_review():
     criticas_col.insert_one(nova_review)
     return jsonify({"message": "Review publicada!"}), 201
 
-
 @app.route('/api/reviews/<review_id>', methods=['DELETE'])
 def deletar_review(review_id):
-    # softdelete: mantém os comentários, apaga o conteúdo e a nota
     criticas_col.update_one(
         {"_id": ObjectId(review_id)},
         {"$set": {"excluida": True, "texto": "Esta review foi excluída pelo autor", "nota": 0}}
@@ -212,7 +204,6 @@ def editar_resposta_rota(review_id):
         {"$set": {"respostas.$.texto": data['novo_texto']}}
     )
     return jsonify({"status": "sucesso"}), 200
-
 
 @app.route('/api/albuns/<int:id_album>', methods=['GET'])
 def detalhes_album(id_album):
@@ -253,18 +244,13 @@ def detalhes_album(id_album):
     }), 200
 
 # --- INTERAÇÕES E NOTIFICAÇÕES ---
-
 @app.route('/api/reviews/<review_id>/curtir', methods=['POST'])
 def curtir_review(review_id):
     data = request.json
     id_user_curtiu = data.get('id_user')
     
-    # busca quem está curtindo no banco
     user_curtiu = usuarios_col.find_one({"id_user": id_user_curtiu})
-    
     nome_quem_curtiu = user_curtiu.get('username') if user_curtiu else data.get('username', 'Alguém')
-    
-    # pega a foto de quem curtiu ---
     imagem_quem_curtiu = user_curtiu.get('imagem_url') if user_curtiu else "default_avatar.png"
     
     review_original = criticas_col.find_one_and_update(
@@ -275,19 +261,23 @@ def curtir_review(review_id):
     if not review_original:
         return jsonify({"error": "Review não encontrada"}), 404
 
-    # Só notifica se for outra pessoa
     if review_original['id_user'] != id_user_curtiu:
-        album_db = albuns_col.find_one({"id_album": review_original['id_album']})
-        nome_album = album_db['title'] if album_db else "Desconhecido"
+        user_alvo = usuarios_col.find_one({"id_user": review_original['id_user']})
+        pref = user_alvo.get('pref_notificacoes', {}) if user_alvo else {}
+        
+        if pref.get('curtidas', True):
+            album_db = albuns_col.find_one({"id_album": review_original['id_album']})
+            nome_album = album_db['title'] if album_db else "Desconhecido"
 
-        notificacoes_col.insert_one({
-            "para_id_user": review_original['id_user'],
-            "mensagem": f"{nome_quem_curtiu} curtiu sua review do álbum {nome_album}!", 
-            "tipo": "curtida",
-            "imagem_url": imagem_quem_curtiu, 
-            "lida": False,
-            "data": datetime.now().strftime("%d/%m/%Y %H:%M")
-        })
+            notificacoes_col.insert_one({
+                "para_id_user": review_original['id_user'],
+                "mensagem": f"@{nome_quem_curtiu} curtiu sua review do álbum {nome_album}!", 
+                "tipo": "curtida",
+                "imagem_url": imagem_quem_curtiu, 
+                "lida": False,
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "id_album": review_original['id_album']
+            })
 
     return jsonify({"status": "sucesso"}), 200
 
@@ -301,16 +291,19 @@ def obter_notificacoes(id_user):
 def responder_review(review_id):
     data = request.json
     id_resp = data.get('id_user')
+    texto = data.get('texto')
     
     user_resp = usuarios_col.find_one({"id_user": id_resp})
-    
     imagem_quem_resp = user_resp.get('imagem_url') if user_resp else "default_avatar.png"
+    username_resp = user_resp.get('username') if user_resp else data.get('username', 'Alguém')
     
     nova_resposta = {
+        "id_resposta": str(ObjectId()), 
         "id_user": id_resp,
-        "username": user_resp.get('username') if user_resp else data.get('username', 'Alguém'),
-        "texto": data.get('texto'),
-        "data": datetime.now().strftime("%d/%m/%Y %H:%M")
+        "username": username_resp,
+        "texto": texto,
+        "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "curtidas": [] 
     }
 
     review_alvo = criticas_col.find_one_and_update(
@@ -318,19 +311,89 @@ def responder_review(review_id):
         {"$push": {"respostas": nova_resposta}}
     )
 
-    # Notifica o dono da review
-    if review_alvo and review_alvo['id_user'] != id_resp:
-        notificacoes_col.insert_one({
-            "para_id_user": review_alvo['id_user'],
-            "mensagem": f"{nova_resposta['username']} respondeu sua review!",
-            "tipo": "resposta",
-            "texto_comentario": nova_resposta['texto'],
-            "imagem_url": imagem_quem_resp, 
-            "lida": False,
-            "data": datetime.now().strftime("%d/%m/%Y %H:%M")
-        })
+    if not review_alvo: return jsonify({"error": "Review não encontrada"}), 404
+
+    if review_alvo['id_user'] != id_resp:
+        user_alvo = usuarios_col.find_one({"id_user": review_alvo['id_user']})
+        pref = user_alvo.get('pref_notificacoes', {}) if user_alvo else {}
+        
+        if pref.get('respostas', True):
+            notificacoes_col.insert_one({
+                "para_id_user": review_alvo['id_user'],
+                "mensagem": f"@{username_resp} respondeu sua review!",
+                "tipo": "resposta",
+                "texto_comentario": texto,
+                "imagem_url": imagem_quem_resp, 
+                "lida": False,
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "id_album": review_alvo['id_album']
+            })
+
+    mencoes = set(re.findall(r'@(\w+)', texto))
+    for m in mencoes:
+        user_mencionado = usuarios_col.find_one({"username": m})
+        if user_mencionado and user_mencionado['id_user'] != id_resp and user_mencionado['id_user'] != review_alvo['id_user']:
+            pref_m = user_mencionado.get('pref_notificacoes', {})
+            if pref_m.get('respostas', True):
+                notificacoes_col.insert_one({
+                    "para_id_user": user_mencionado['id_user'],
+                    "mensagem": f"@{username_resp} mencionou você em um comentário!",
+                    "tipo": "resposta",
+                    "texto_comentario": texto,
+                    "imagem_url": imagem_quem_resp, 
+                    "lida": False,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "id_album": review_alvo['id_album']
+                })
 
     return jsonify({"message": "Resposta enviada!"}), 200
+
+@app.route('/api/reviews/<review_id>/respostas/<id_resposta>/curtir', methods=['POST'])
+def curtir_resposta(review_id, id_resposta):
+    data = request.json
+    id_user_curtiu = data.get('id_user')
+    
+    user_curtiu = usuarios_col.find_one({"id_user": id_user_curtiu})
+    nome_quem_curtiu = user_curtiu.get('username') if user_curtiu else "Alguém"
+    imagem_quem_curtiu = user_curtiu.get('imagem_url') if user_curtiu else "default_avatar.png"
+
+    review = criticas_col.find_one({"_id": ObjectId(review_id)})
+    if not review: return jsonify({"error": "Review não encontrada"}), 404
+        
+    resposta_alvo = next((r for r in review.get('respostas', []) if r.get('id_resposta') == id_resposta), None)
+    if not resposta_alvo: return jsonify({"error": "Resposta não encontrada"}), 404
+    
+    ja_curtiu = id_user_curtiu in resposta_alvo.get('curtidas', [])
+    
+    if ja_curtiu:
+        criticas_col.update_one(
+            {"_id": ObjectId(review_id), "respostas.id_resposta": id_resposta},
+            {"$pull": {"respostas.$.curtidas": id_user_curtiu}}
+        )
+        return jsonify({"status": "unliked"}), 200
+    else:
+        criticas_col.update_one(
+            {"_id": ObjectId(review_id), "respostas.id_resposta": id_resposta},
+            {"$addToSet": {"respostas.$.curtidas": id_user_curtiu}}
+        )
+        
+        if resposta_alvo['id_user'] != id_user_curtiu:
+            user_alvo = usuarios_col.find_one({"id_user": resposta_alvo['id_user']})
+            pref = user_alvo.get('pref_notificacoes', {}) if user_alvo else {}
+            
+            if pref.get('curtidas', True):
+                notificacoes_col.insert_one({
+                    "para_id_user": resposta_alvo['id_user'],
+                    "mensagem": f"@{nome_quem_curtiu} curtiu seu comentário!", 
+                    "tipo": "curtida",
+                    "texto_comentario": resposta_alvo['texto'],
+                    "imagem_url": imagem_quem_curtiu, 
+                    "lida": False,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "id_album": review['id_album']
+                })
+
+        return jsonify({"status": "liked"}), 200
 
 @app.route('/api/notificacoes/<notif_id>/ler', methods=['PATCH'])
 def marcar_como_lida(notif_id):
@@ -340,28 +403,18 @@ def marcar_como_lida(notif_id):
     )
     return jsonify({"status": "sucesso"}), 200
 
-
-
-# --- SEÇÕES DA HOME (Lógica Completa com Ajustes) ---
-def calcular_nota_media(id_album):
-    """Função auxiliar para calcular a média de um álbum específico"""
-    reviews = list(criticas_col.find({"id_album": id_album}))
-    notas = [r['nota'] for r in reviews if 'nota' in r]
-    return round(sum(notas) / len(notas), 1) if notas else 0.0
-
+# --- SEÇÕES DA HOME E FEED ---
 def buscar_detalhes_album(lista_agregada):
     if not lista_agregada:
         return []
     
     ids = [item["_id"] for item in lista_agregada]
     albuns = list(albuns_col.find({"id_album": {"$in": ids}}, {"_id": 0}))
-    
     albuns.sort(key=lambda x: ids.index(x["id_album"]))
     
     for alb in albuns:
         art = artistas_col.find_one({"id_artista": alb["id_artista"]})
         alb["artist"] = art["name"] if art else "Desconhecido"
-        
         reviews = list(criticas_col.find({"id_album": alb["id_album"]}))
         notas = [r['nota'] for r in reviews if 'nota' in r]
         alb["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
@@ -370,7 +423,6 @@ def buscar_detalhes_album(lista_agregada):
 
 @app.route('/api/home/secoes', methods=['GET'])
 def obter_secoes_home():
-    # 1. Melhores Avaliações
     pipeline_top = [
         {"$group": {"_id": "$id_album", "media": {"$avg": "$nota"}, "total": {"$sum": 1}}},
         {"$sort": {"media": -1, "total": -1}},
@@ -378,9 +430,7 @@ def obter_secoes_home():
     ]
     melhores_agregados = list(criticas_col.aggregate(pipeline_top))
     
-    # 2. Em Alta (Última semana)
     uma_semana = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
-    
     pipeline_trending = [
         {"$match": {"data_postagem": {"$gte": uma_semana}}},
         {"$group": {"_id": "$id_album", "contagem": {"$sum": 1}}},
@@ -389,18 +439,15 @@ def obter_secoes_home():
     ]
     trending_agregados = list(criticas_col.aggregate(pipeline_trending))
 
-    # 3. Novos Lançamentos
     novos_lancamentos = list(albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(8))
     for nl in novos_lancamentos:
         art = artistas_col.find_one({"id_artista": nl["id_artista"]})
         nl["artist"] = art["name"] if art else "Desconhecido"
-        
         reviews = list(criticas_col.find({"id_album": nl["id_album"]}))
         notas = [r['nota'] for r in reviews if 'nota' in r]
         nl["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
 
     lista_trending = buscar_detalhes_album(trending_agregados)
-    
     if not lista_trending:
         lista_trending = list(albuns_col.find({}, {"_id": 0}).limit(8))
         for x in lista_trending:
@@ -411,7 +458,6 @@ def obter_secoes_home():
              x["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
 
     lista_top = buscar_detalhes_album(melhores_agregados)
-    
     if not lista_top:
         lista_top = list(albuns_col.find({}, {"_id": 0}).skip(8).limit(8))
         for x in lista_top:
@@ -427,47 +473,33 @@ def obter_secoes_home():
         "new_releases": novos_lancamentos
     })
 
-# Função auxiliar para formatar a resposta
 def formatar_albuns(lista_ids_ou_docs):
     resultados = []
-    
-    if not lista_ids_ou_docs:
-        return []
+    if not lista_ids_ou_docs: return []
 
     primeiro_item = lista_ids_ou_docs[0]
-    
     if "title" in primeiro_item:
         albuns_db = lista_ids_ou_docs
         ids_para_ordenar = None 
     else:
-        # Caso contrário, extraímos os IDs para buscar
         ids_para_ordenar = [item["_id"] if "_id" in item else item["id_album"] for item in lista_ids_ou_docs]
         albuns_db = list(albuns_col.find({"id_album": {"$in": ids_para_ordenar}}, {"_id": 0}))
-
-        # Reordena a lista do banco para bater com a ordem do ranking
         if ids_para_ordenar:
             albuns_db.sort(key=lambda x: ids_para_ordenar.index(x["id_album"]))
 
     for album in albuns_db:
         art = artistas_col.find_one({"id_artista": album["id_artista"]})
         album["artist"] = art["name"] if art else "Desconhecido"
-        
-        # CÁLCULO REAL DA MÉDIA
         reviews_album = list(criticas_col.find({"id_album": album["id_album"]}))
         notas = [r['nota'] for r in reviews_album if 'nota' in r]
-        
-        # Se não tiver nota, fica 0.0. Se tiver, calcula a média.
         album["rating"] = round(sum(notas) / len(notas), 1) if notas else 0.0
-        
         resultados.append(album)
     
     return resultados
 
-# Rota de listagem para albuns em alta, melhores avaliações e lançamentos
 @app.route('/api/lista/em-alta', methods=['GET'])
 def lista_em_alta():
     uma_semana_atras = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
-    
     pipeline = [
         {"$match": {"data_postagem": {"$gte": uma_semana_atras}}},
         {"$group": {"_id": "$id_album", "contagem": {"$sum": 1}}},
@@ -475,11 +507,9 @@ def lista_em_alta():
         {"$limit": 50} 
     ]
     ids = list(criticas_col.aggregate(pipeline))
-    
     if not ids: 
         fallback = list(albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(20))
         return jsonify(formatar_albuns(fallback))
-        
     return jsonify(formatar_albuns(ids))
 
 @app.route('/api/lista/melhores', methods=['GET'])
@@ -495,66 +525,39 @@ def lista_melhores():
 
 @app.route('/api/lista/lancamentos', methods=['GET'])
 def lista_lancamentos():
-    # Busca os álbuns ordenados por ano do mais novo para o mais antigo
     albuns_cursor = albuns_col.find({}, {"_id": 0}).sort("year", -1).limit(50)
-    
     return jsonify(formatar_albuns(list(albuns_cursor)))
 
-# --- ADICIONAR ÁLBUM AOS FAVORITOS (MÁX 5) ---
+# --- FAVORITOS E PERFIL ---
 @app.route("/api/users/<int:id_user>/favorites", methods=["POST"])
 def adicionar_favorito(id_user):
     data = request.json or {}
     id_album = data.get("id_album")
 
-    if id_album is None:
-        return jsonify({"error": "id_album é obrigatório"}), 400
-
-    # garante int (se vier string)
-    try:
-        id_album = int(id_album)
-    except (TypeError, ValueError):
-        return jsonify({"error": "id_album deve ser número"}), 400
+    if id_album is None: return jsonify({"error": "id_album é obrigatório"}), 400
+    try: id_album = int(id_album)
+    except (TypeError, ValueError): return jsonify({"error": "id_album deve ser número"}), 400
 
     usuario = usuarios_col.find_one({"id_user": id_user})
-    if not usuario:
-        return jsonify({"error": "Usuário não encontrado"}), 404
+    if not usuario: return jsonify({"error": "Usuário não encontrado"}), 404
 
     favoritos = usuario.get("albuns_favoritos", [])
+    if id_album in favoritos: return jsonify({"error": "Álbum já está nos favoritos"}), 400
+    if len(favoritos) >= 5: return jsonify({"error": "Limite de 5 favoritos atingido"}), 400
 
-    if id_album in favoritos:
-        return jsonify({"error": "Álbum já está nos favoritos"}), 400
-
-    if len(favoritos) >= 5:
-        return jsonify({"error": "Limite de 5 favoritos atingido"}), 400
-
-    usuarios_col.update_one(
-        {"id_user": id_user},
-        {"$push": {"albuns_favoritos": id_album}}
-    )
-
+    usuarios_col.update_one({"id_user": id_user}, {"$push": {"albuns_favoritos": id_album}})
     return jsonify({"message": "Álbum adicionado aos favoritos"}), 200
 
-# --- REMOVER ÁLBUM DOS FAVORITOS ---
 @app.route("/api/users/<int:id_user>/favorites/<int:id_album>", methods=["DELETE"])
 def remover_favorito(id_user, id_album):
     usuario = usuarios_col.find_one({"id_user": id_user})
-    if not usuario:
-        return jsonify({"error": "Usuário não encontrado"}), 404
+    if not usuario: return jsonify({"error": "Usuário não encontrado"}), 404
 
     favoritos = usuario.get("albuns_favoritos", [])
-    if id_album not in favoritos:
-        return jsonify({"error": "Álbum não está nos favoritos"}), 400
+    if id_album not in favoritos: return jsonify({"error": "Álbum não está nos favoritos"}), 400
 
-    usuarios_col.update_one(
-        {"id_user": id_user},
-        {"$pull": {"albuns_favoritos": id_album}}
-    )
-
+    usuarios_col.update_one({"id_user": id_user}, {"$pull": {"albuns_favoritos": id_album}})
     return jsonify({"message": "Álbum removido dos favoritos"}), 200
-
-
-
-# --- ROTAS DE PERFIL ---
 
 @app.route('/api/users/<int:id_user>', methods=['GET'])
 def get_user_profile(id_user):
@@ -563,10 +566,8 @@ def get_user_profile(id_user):
 
     fav_ids = usuario.get("albuns_favoritos", [])
     favoritos_detalhados = []
-    
     if fav_ids:
         albuns_db = list(albuns_col.find({"id_album": {"$in": fav_ids}}, {"_id": 0}))
-        # Mantém a ordem
         for fid in fav_ids:
             found = next((a for a in albuns_db if a["id_album"] == fid), None)
             if found:
@@ -585,9 +586,40 @@ def get_user_profile(id_user):
                 album_data["artist"] = art["name"] if art else ""
             review["album_info"] = album_data
 
-    return jsonify({"user": usuario, "favorites": favoritos_detalhados, "reviews": user_reviews, "seguidores": usuario.get("seguidores", []), "seguindo": usuario.get("seguindo", []) }), 200
+    listas_agregadas = list(listas_col.aggregate([
+        {"$match": {"id_user": id_user}},
+        {"$lookup": {
+            "from": "albums",
+            "localField": "albuns",
+            "foreignField": "id_album",
+            "as": "detalhes_albuns"
+        }},
+        {"$project": {
+            "_id": {"$toString": "$_id"},
+            "titulo": 1,
+            "descricao": 1,
+            "albuns": 1,
+            "data_criacao": 1,
+            "capa_personalizada": 1,
+            "capas": {
+                "$slice": [
+                    {"$map": {"input": "$detalhes_albuns", "as": "a", "in": "$$a.image"}},
+                    4
+                ]
+            }
+        }},
+        {"$sort": {"data_criacao": -1}}
+    ]))
 
-# PATCH PERFIL
+    return jsonify({
+        "user": usuario, 
+        "favorites": favoritos_detalhados, 
+        "reviews": user_reviews, 
+        "listas": listas_agregadas,
+        "seguidores": usuario.get("seguidores", []), 
+        "seguindo": usuario.get("seguindo", []) 
+    }), 200
+
 @app.route('/api/users/<int:id_user>', methods=['PATCH'])
 def update_user_profile(id_user):
     data = request.json
@@ -598,26 +630,45 @@ def update_user_profile(id_user):
     if 'localizacao' in data: campos_atualizar['localizacao'] = data['localizacao']
     if 'imagem_url' in data: campos_atualizar['imagem_url'] = data['imagem_url']
     
+    if 'email' in data:
+        if usuarios_col.find_one({"email": data['email'], "id_user": {"$ne": id_user}}):
+            return jsonify({"error": "Este e-mail já está em uso por outra pessoa."}), 400
+        campos_atualizar['email'] = data['email']
+        
+    if 'username' in data:
+        if usuarios_col.find_one({"username": data['username'], "id_user": {"$ne": id_user}}):
+            return jsonify({"error": "Este nome de usuário já está em uso."}), 400
+        campos_atualizar['username'] = data['username']
+
+    if 'senha_nova' in data and 'senha_atual' in data:
+        usuario = usuarios_col.find_one({"id_user": id_user})
+        if not usuario or usuario.get('senha') != data['senha_atual']:
+            return jsonify({"error": "A senha atual está incorreta."}), 400
+        if data['senha_nova'] == data['senha_atual']:
+            return jsonify({"error": "A nova senha não pode ser igual à atual."}), 400
+        campos_atualizar['senha'] = data['senha_nova']
+
     if 'albuns_favoritos' in data:
         favoritos = data['albuns_favoritos']
         if isinstance(favoritos, list):
-            # Limpa para garantir inteiros
             lista_limpa = [int(x) for x in favoritos if isinstance(x, (int, str)) and str(x).isdigit()]
             campos_atualizar['albuns_favoritos'] = lista_limpa[:5]
+
+    if 'pref_notificacoes' in data:
+        campos_atualizar['pref_notificacoes'] = data['pref_notificacoes']
 
     if not campos_atualizar: return jsonify({"message": "Nada para atualizar"}), 200
 
     result = usuarios_col.update_one({"id_user": id_user}, {"$set": campos_atualizar})
     if result.matched_count == 0: return jsonify({"error": "Usuário não encontrado"}), 404
 
-    return jsonify({"message": "Perfil atualizado!"}), 200
-
+    user_atualizado = usuarios_col.find_one({"id_user": id_user}, {"_id": 0, "senha": 0})
+    return jsonify({"message": "Dados atualizados com sucesso!", "user": user_atualizado}), 200
 
 @app.route('/api/artistas/nome/<string:nome_artista>', methods=['GET'])
 def detalhes_artista_por_nome(nome_artista):
     artista = artistas_col.find_one({"name": {"$regex": f"^{nome_artista}$", "$options": "i"}}, {"_id": 0})
-    if not artista:
-        return jsonify({"error": "Artista não encontrado"}), 404
+    if not artista: return jsonify({"error": "Artista não encontrado"}), 404
 
     id_artista = artista.get("id_artista")
     albuns = list(albuns_col.find({"id_artista": id_artista}, {"_id": 0}))
@@ -626,78 +677,61 @@ def detalhes_artista_por_nome(nome_artista):
     for album in albuns:
         reviews = list(criticas_col.find({"id_album": album["id_album"]}))
         for r in reviews:
-            if 'nota' in r:
-                total_notas.append(r['nota'])
+            if 'nota' in r: total_notas.append(r['nota'])
         
         notas_album = [r['nota'] for r in reviews if 'nota' in r]
         album["rating"] = round(sum(notas_album) / len(notas_album), 1) if notas_album else 0.0
 
     media_artista = round(sum(total_notas) / len(total_notas), 1) if total_notas else 0.0
 
-    return jsonify({
-        "artista": artista,
-        "media_geral": media_artista,
-        "albuns": albuns
-    }), 200
+    return jsonify({"artista": artista, "media_geral": media_artista, "albuns": albuns}), 200
 
 @app.route('/api/profile/username/<username>', methods=['GET'])
 def get_profile_by_username(username):
     user = db.users.find_one({"username": username}, {"_id": 0, "password": 0})
-    if not user:
-        return jsonify({"error": "Usuário não encontrado"}), 404
+    if not user: return jsonify({"error": "Usuário não encontrado"}), 404
     return jsonify(user)
     
-
 @app.route('/api/users/<int:id_alvo>/follow', methods=['POST'])
 def follow_user(id_alvo):
     data = request.json
     id_logado = data.get('id_user_logado')
 
-    if not id_logado:
-        return jsonify({"error": "Usuário não identificado"}), 400
-    
-    if id_logado == id_alvo:
-        return jsonify({"error": "Você não pode seguir a si mesmo"}), 400
+    if not id_logado: return jsonify({"error": "Usuário não identificado"}), 400
+    if id_logado == id_alvo: return jsonify({"error": "Você não pode seguir a si mesmo"}), 400
 
-    # Busca os usuários no banco
     user_alvo = db.users.find_one({"id_user": id_alvo})
     user_logado = db.users.find_one({"id_user": id_logado})
 
-    if not user_alvo or not user_logado:
-        return jsonify({"error": "Usuário não encontrado"}), 404
+    if not user_alvo or not user_logado: return jsonify({"error": "Usuário não encontrado"}), 404
 
-    # LÓGICA: Se já segue, remove (Unfollow). Se não segue, adiciona (Follow).
     if id_logado in user_alvo.get('seguidores', []):
-        # UNFOLLOW
         db.users.update_one({"id_user": id_alvo}, {"$pull": {"seguidores": id_logado}})
         db.users.update_one({"id_user": id_logado}, {"$pull": {"seguindo": id_alvo}})
         return jsonify({"status": "unfollowed", "message": "Você deixou de seguir este usuário"}), 200
     else:
-        # FOLLOW
         db.users.update_one({"id_user": id_alvo}, {"$push": {"seguidores": id_logado}})
         db.users.update_one({"id_user": id_logado}, {"$push": {"seguindo": id_alvo}})
         
-        # --- SISTEMA DE NOTIFICAÇÃO ---
-        # Criamos um aviso para o usuário que acabou de ser seguido
-        notificacao = {
-            "para_id_user": id_alvo, 
-            "mensagem": f"@{user_logado['username']} começou a te seguir!",
-            "lida": False,
-            "tipo": "follow",
-            "imagem_url": user_logado.get('imagem_url', 'default_avatar.png'), 
-            "data": datetime.now().strftime("%d/%m/%Y %H:%M") # Formatado para facilitar a exibição
-        }
-        db.notifications.insert_one(notificacao)
+        pref = user_alvo.get('pref_notificacoes', {})
+        if pref.get('seguidores', True):
+            notificacao = {
+                "para_id_user": id_alvo, 
+                "mensagem": f"@{user_logado['username']} começou a te seguir!",
+                "lida": False,
+                "tipo": "follow",
+                "imagem_url": user_logado.get('imagem_url', 'default_avatar.png'), 
+                "data": datetime.now().strftime("%d/%m/%Y %H:%M")
+            }
+            db.notifications.insert_one(notificacao)
         
         return jsonify({"status": "followed", "message": "Agora você está seguindo este usuário"}), 200
-     
+      
 @app.route('/api/users/<int:id_user>/rede', methods=['GET'])
 def buscar_rede_social(id_user):
     usuario = usuarios_col.find_one({"id_user": id_user})
-    if not usuario:
-        return jsonify({"error": "Usuário não encontrado"}), 404
+    if not usuario: return jsonify({"error": "Usuário não encontrado"}), 404
 
-    # Busca detalhes (nome, username, foto) de todos os seguidores e seguindo
     def buscar_detalhes(lista_ids):
         return list(usuarios_col.find(
             {"id_user": {"$in": lista_ids}},
@@ -708,7 +742,98 @@ def buscar_rede_social(id_user):
         "seguidores": buscar_detalhes(usuario.get("seguidores", [])),
         "seguindo": buscar_detalhes(usuario.get("seguindo", []))
     }), 200
+
+@app.route('/api/feed/<int:id_user>', methods=['GET'])
+def obter_feed_usuario(id_user):
+    usuario = usuarios_col.find_one({"id_user": id_user})
+    if not usuario: return jsonify({"error": "Usuário não encontrado"}), 404
+
+    seguindo = usuario.get("seguindo", [])
+    if not seguindo: return jsonify([]), 200
+
+    feed_reviews = list(criticas_col.find({"id_user": {"$in": seguindo}}).sort("data_postagem", -1).limit(50))
     
+    for review in feed_reviews:
+        review['_id'] = str(review['_id'])
+        autor = usuarios_col.find_one({"id_user": review["id_user"]})
+        if autor:
+            review['autor_nome'] = autor.get('nome', 'Usuário')
+            review['autor_username'] = autor.get('username', '')
+            review['autor_imagem'] = autor.get('imagem_url', 'default_avatar.png')
+        
+        album_data = albuns_col.find_one({"id_album": review['id_album']}, {"_id": 0, "title": 1, "image": 1, "id_artista": 1})
+        if album_data:
+            if "id_artista" in album_data:
+                art = artistas_col.find_one({"id_artista": album_data["id_artista"]})
+                album_data["artist"] = art["name"] if art else ""
+            review["album_info"] = album_data
+
+    return jsonify(feed_reviews), 200
+
+# --- ROTAS DE LISTAS PERSONALIZADAS ---
+@app.route('/api/users/<int:id_user>/listas', methods=['POST'])
+def criar_lista(id_user):
+    data = request.json
+    nova_lista = {
+        "id_user": id_user,
+        "titulo": data.get("titulo", "Nova Playlist"),
+        "descricao": data.get("descricao", ""),
+        "capa_personalizada": "", 
+        "albuns": [],
+        "data_criacao": datetime.now().strftime("%d/%m/%Y %H:%M")
+    }
+    listas_col.insert_one(nova_lista)
+    return jsonify({"message": "Lista criada!"}), 201
+
+@app.route('/api/listas/<lista_id>', methods=['GET', 'PATCH', 'DELETE'])
+def gerenciar_lista(lista_id):
+    if request.method == 'DELETE':
+        listas_col.delete_one({"_id": ObjectId(lista_id)})
+        return jsonify({"message": "Lista excluída!"}), 200
+        
+    elif request.method == 'PATCH':
+        data = request.json
+        campos = {}
+        if 'titulo' in data: campos['titulo'] = data['titulo']
+        if 'descricao' in data: campos['descricao'] = data['descricao']
+        if 'capa_personalizada' in data: campos['capa_personalizada'] = data['capa_personalizada']
+        
+        listas_col.update_one({"_id": ObjectId(lista_id)}, {"$set": campos})
+        return jsonify({"message": "Lista atualizada!"}), 200
+        
+    elif request.method == 'GET':
+        lista = listas_col.find_one({"_id": ObjectId(lista_id)})
+        if not lista: return jsonify({"error": "Lista não encontrada"}), 404
+        
+        lista['_id'] = str(lista['_id'])
+        
+        dono = usuarios_col.find_one({"id_user": lista['id_user']}, {"_id":0, "username":1, "nome":1, "imagem_url":1})
+        lista['criador'] = dono
+        
+        albuns_completos = []
+        if lista.get('albuns'):
+            albuns_db = list(albuns_col.find({"id_album": {"$in": lista['albuns']}}, {"_id": 0}))
+            albuns_db.sort(key=lambda x: lista['albuns'].index(x["id_album"]))
+            
+            for alb in albuns_db:
+                art = artistas_col.find_one({"id_artista": alb["id_artista"]})
+                alb["artist"] = art["name"] if art else "Desconhecido"
+                albuns_completos.append(alb)
+                
+        lista['albuns_detalhados'] = albuns_completos
+        return jsonify(lista), 200
+
+@app.route('/api/listas/<lista_id>/albuns', methods=['POST'])
+def adicionar_album_lista(lista_id):
+    id_album = request.json.get("id_album")
+    listas_col.update_one({"_id": ObjectId(lista_id)}, {"$addToSet": {"albuns": int(id_album)}})
+    return jsonify({"message": "Álbum adicionado à lista!"}), 200
+
+@app.route('/api/listas/<lista_id>/albuns/<int:id_album>', methods=['DELETE'])
+def remover_album_lista(lista_id, id_album):
+    listas_col.update_one({"_id": ObjectId(lista_id)}, {"$pull": {"albuns": int(id_album)}})
+    return jsonify({"message": "Álbum removido da lista!"}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

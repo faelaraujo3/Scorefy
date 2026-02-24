@@ -9,6 +9,8 @@ import billieImg from '../assets/Billie.jpg';
 import taylorImg from '../assets/Taylor2.jpg';
 import addisonImg from '../assets/addison.png';
 import logoAddison from '../assets/addisonlogo.png';
+import PinkPantheress from '../assets/pinkpantheress.jpg';
+import ZaraLarsson from '../assets/zarams.jpg';
 
 export default function Home({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,7 +86,7 @@ export default function Home({ user, onLogout }) {
     {
       id: 1,
       type: 'gradient',
-      bg: 'linear-gradient(90deg, #104e8bff 0%, #308eccff 100%)',
+      bg: 'linear-gradient(90deg, #104e8bff 0%, #319fe9ff 100%)',
       badge: 'Recomendado',
       badgeColor: '#caf3f8ff',
       icon: <Sparkles size={12} />,
@@ -102,13 +104,27 @@ export default function Home({ user, onLogout }) {
       icon: <Disc size={12} />,
       title: 'HIT ME HARD AND SOFT',
       titleColor: '#83ecffff',
-      overlay: 'linear-gradient(90deg, #0e5f94ff 0%, #11528faa 30%, rgba(11, 83, 131, 0) 70%)',
+      overlay: 'linear-gradient(90deg, #0e5f94ff 0%, #11528faa 40%, rgba(11, 83, 131, 0) 60%)',
       desc: 'Confira as avaliações do álbum eleito como "Melhor da Década" pelos nossos usuários.',
       btnText: 'Visitar Álbum',
       path: '/album/45',
     },
     {
       id: 3,
+      type: 'image',
+      bg: PinkPantheress,
+      badge: 'Em Alta',
+      badgeColor: '#ffd3d0ff',
+      icon: <Music size={12} />,
+      title: 'FANCY THAT',
+      titleColor: '#ffffffff',
+      overlay: 'linear-gradient(90deg, #a50909ff 10%, #b824119d 30%, rgba(143, 11, 11, 0) 70%)',
+      desc: 'É altamente ilegal ignorar esse álbum.',
+      btnText: 'Visitar Álbum',
+      path: '/album/48',
+    },
+    {
+      id: 4,
       type: 'image',
       bg: taylorImg,
       badge: 'Lançamento',
@@ -122,7 +138,7 @@ export default function Home({ user, onLogout }) {
       path: '/album/42',
     },
     {
-      id: 4,
+      id: 5,
       type: 'image',
       bg: addisonImg,
       badge: 'Em Alta',
@@ -134,6 +150,20 @@ export default function Home({ user, onLogout }) {
       desc: 'De celebridade da internet à indicada ao Grammy, conheça o álbum da Revelação do Ano pelo Scorefy.',
       btnText: 'Visitar Álbum',
       path: '/album/48',
+    },
+    {
+    id: 6,
+    type: 'image',
+    bg: ZaraLarsson,
+    badge: 'Em Alta', 
+    badgeColor: '#faf88eff',
+    icon: <Music size={12} />,
+    title: 'MIDNIGHT SUN',
+    titleColor: '#fff024ff',
+    overlay: 'linear-gradient(90deg, #0190b4ea 10%, #2dbfca63 40%, rgba(11, 139, 143, 0) 60%)',
+    desc: 'Zara Larsson traz o Pop Refrescante de verão de volta aos holofotes de um sol eterno.',
+    btnText: 'Visitar Álbum',
+    path: '/album/48',
     }
   ];
 
@@ -251,7 +281,7 @@ export default function Home({ user, onLogout }) {
                     {searchResults.usuarios.map(u => (
                       <div 
                         key={u.id_user} 
-                        onClick={() => navigate(`/profile/${u.id_user}`)} 
+                        onClick={() => navigate(`/profile/${u.username}`)}
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '20px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s', width: '150px' }} 
                         onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(-4px)'}} 
                         onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'; e.currentTarget.style.transform = 'translateY(0)'}}

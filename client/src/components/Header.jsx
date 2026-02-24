@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, User, Flame, Globe, Sparkles, LogOut, LogIn, UserPlus, Settings, Heart, MessageCircle, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Search, Bell, User, Flame, Globe, Sparkles, LogOut, LogIn, UserPlus, Settings, Heart, MessageCircle, SlidersHorizontal, ChevronDown, Users } from 'lucide-react';
 import logoScorefy from '../assets/logoscorefy.png';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -111,7 +111,7 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
     const input = document.getElementById('search-input');
     if (input) input.value = term;
     if (onSearch) onSearch(term);
-    setShowFilterMenu(false); // Fecha o balão após escolher
+    setShowFilterMenu(false); 
   };
 
   const unreadCount = notifications.filter(n => !n.lida).length;
@@ -136,7 +136,7 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
       {!hideNav && (
         <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '9999px', padding: '4px', border: '1px solid rgba(255, 255, 255, 0.05)', position: 'absolute', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}>
           <NavButton icon={<Globe size={18} />} label="Explorar" active={isActive('/')} onClick={() => navigate('/')} />
-          <NavButton icon={<Flame size={18} />} label="Em Alta" active={isActive('/trending')} onClick={() => navigate('/trending')} />
+          <NavButton icon={<Users size={18} />} label="Seguindo" active={isActive('/feed')} onClick={() => navigate('/feed')} />
           <NavButton icon={<Sparkles size={18} />} label="Lançamentos" active={isActive('/releases')} onClick={() => navigate('/releases')} />
         </nav>
       )}
@@ -290,15 +290,37 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
                     </div>
                   ) : (
                     notifications.map(notif => {
-                      const isLike = notif.tipo === 'curtida';
                       const firstWord = notif.mensagem.split(' ')[0] || '?';
-                      const initial = firstWord.charAt(0).toUpperCase();
+                      const cleanUsername = firstWord.replace('@', ''); // Tira o @ para redirecionar
+                      const initial = cleanUsername.charAt(0).toUpperCase();
                       const messageRest = notif.mensagem.substring(firstWord.length);
+
+                      // Lógica central de clique na notificação
+                      const handleNotificationClick = () => {
+                        // Marca como lida
+                        if (!notif.lida) handleMarkAsRead(notif._id, notif.lida);
+                        
+                        setShowNotifMenu(false);
+
+                        if (notif.tipo === 'follow') {
+                          navigate(`/profile/${cleanUsername}`);
+                        } else if (notif.tipo === 'curtida' || notif.tipo === 'resposta') {
+                          
+                          // Verifica se o backend salvou mesmo o id_album na notificação
+                          if (notif.id_album) {
+                            navigate(`/album/${notif.id_album}`);
+                          } else {
+                            // log pra ver o erro
+                            console.error("Falta o ID do álbum nesta notificação:", notif);
+                            alert("Erro de Backend: O servidor não salvou o 'id_album' nesta notificação. reinicie o servidor Python!");
+                          }
+                        }
+                      };
 
                       return (
                         <div
                           key={notif._id}
-                          onClick={() => handleMarkAsRead(notif._id, notif.lida)}
+                          onClick={handleNotificationClick} 
                           style={{
                             display: 'flex', gap: '12px', padding: '16px 20px',
                             borderBottom: '1px solid rgba(255,255,255,0.04)',
@@ -308,22 +330,27 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
                           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)')}
                           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = notif.lida ? 'transparent' : 'rgba(255, 255, 255, 0.03)')}
                         >
-                          {/* Ícone de Ação */}
+                          {/* Ícone de Ação Dinâmico */}
                           <div style={{ display: 'flex', justifyContent: 'flex-end', width: '32px', flexShrink: 0, paddingTop: '4px' }}>
-                            {isLike ? (
-                              <Heart size={26} fill="#f91880" color="#f91880" />
-                            ) : (
-                              <MessageCircle size={26} fill="#1d9bf0" color="#1d9bf0" />
-                            )}
+                            {notif.tipo === 'curtida' && <Heart size={26} fill="#f91880" color="#f91880" />}
+                            {notif.tipo === 'resposta' && <MessageCircle size={26} fill="#1d9bf0" color="#1d9bf0" />}
+                            {notif.tipo === 'follow' && <UserPlus size={26} color="#10b981" />}
                           </div>
 
                           {/* Conteúdo */}
                           <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '8px' }}>
                             
                             {/* Avatar de quem interagiu */}
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '14px', overflow: 'hidden' }}>
+                            <div 
+                              style={{ 
+                                width: '32px', height: '32px', borderRadius: '50%', 
+                                backgroundColor: '#222', border: '1px solid rgba(255,255,255,0.1)', 
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                color: 'white', fontWeight: 'bold', fontSize: '14px', overflow: 'hidden', flexShrink: 0
+                              }}
+                            >
                               {notif.imagem_url && notif.imagem_url !== 'default_avatar.png' ? (
-                                <img src={notif.imagem_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={notif.imagem_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { e.target.style.display = 'none'; }} />
                               ) : (
                                 initial
                               )}
@@ -336,7 +363,7 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
                             </p>
 
                             {/* Comentário extra */}
-                            {!isLike && notif.texto_comentario && (
+                            {notif.tipo === 'resposta' && notif.texto_comentario && (
                               <p style={{ margin: 0, fontSize: '15px', color: '#6b7280', lineHeight: '1.4' }}>
                                 {notif.texto_comentario}
                               </p>
@@ -406,8 +433,8 @@ export default function Header({ onSearch, hideSearch, hideNav }) {
                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: 'white' }}>{user.nome}</p>
                     <p style={{ margin: 0, fontSize: '12px', color: '#888' }}>{user.email}</p>
                   </div>
-                  <MenuItem icon={<User size={16} />} label="Meu Perfil" onClick={() => navigate('/profile')} />
-                  <MenuItem icon={<Settings size={16} />} label="Configurações" onClick={() => {}} />
+                  <MenuItem icon={<User size={16} />} label="Meu Perfil" onClick={() => navigate(`/profile/${user.username}`)} />
+                  <MenuItem icon={<Settings size={16} />} label="Configurações" onClick={() => navigate('/settings')} />
                   <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '4px 8px' }} />
                   <MenuItem icon={<LogOut size={16} />} label="Sair da conta" onClick={handleLogout} danger />
                 </>
@@ -475,7 +502,7 @@ function MenuItem({ icon, label, onClick, danger, highlight }) {
 function NavButton({ icon, label, active, onClick }) {
   const [isHovered, setIsHovered] = useState(false);
   const baseStyle = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '9999px', fontSize: '14px', fontWeight: '500', transition: 'all 0.2s', border: 'none', cursor: 'pointer', outline: 'none' };
-  const activeStyle = { backgroundColor: '#0891b2', color: 'white', boxShadow: '0 10px 15px -3px rgba(8, 145, 178, 0.3)' };
+  const activeStyle = { backgroundColor: '#1a93daff', color: 'white' };
   const inactiveStyle = { backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.05)' : 'transparent', color: isHovered ? 'white' : '#9ca3af' };
   return (
     <button 

@@ -1,12 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import Home from './pages/Home';
-import Profile from './pages/Profile'; 
+import Profile from './pages/Profile';
 import Album from './pages/Album';
 import Artist from './pages/Artist';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AlbumList from './pages/AlbumList';
+import Settings from './pages/Settings';
+import Feed from './pages/Feed';
+import Playlist from './pages/Playlist';
 import './App.css';
 
 function App() {
@@ -46,13 +49,13 @@ function App() {
         {/* Rotas que exigem login */}
         <Route path="/" element={
           <ProtectedRoute>
-            <Home user={user} onLogout={handleLogout} /> 
+            <Home user={user} onLogout={handleLogout} />
           </ProtectedRoute>
         } />
 
         <Route path="/" element={
           <ProtectedRoute>
-            <Home user={user} onLogout={handleLogout} /> 
+            <Home user={user} onLogout={handleLogout} />
           </ProtectedRoute>
         } />
 
@@ -61,28 +64,28 @@ function App() {
             <AlbumList title="Em Alta" apiEndpoint="/api/lista/em-alta" />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/top-rated" element={
           <ProtectedRoute>
             <AlbumList title="Melhores Avaliações" apiEndpoint="/api/lista/melhores" />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/releases" element={
           <ProtectedRoute>
             <AlbumList title="Novos Lançamentos" apiEndpoint="/api/lista/lancamentos" />
           </ProtectedRoute>
         } />
-        
+
         <Route path="/profile" element={
           <ProtectedRoute>
-            <Profile user={user} />
+            <Profile />
           </ProtectedRoute>
         } />
 
-        <Route path="/profile/:id" element={
-          <Profile user={user} />
-        } />
+        <Route path="/profile/:identifier" element={<Profile />} />
+
+        <Route path="/playlist/:id" element={<Playlist />} />
 
         <Route path="/album/:id" element={
           <ProtectedRoute>
@@ -95,6 +98,19 @@ function App() {
             <Artist />
           </ProtectedRoute>
         } />
+
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/feed" element={
+          <ProtectedRoute>
+            <Feed />
+          </ProtectedRoute>
+        } />
+        
 
       </Routes>
     </BrowserRouter>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { Heart, Plus, Star, StarHalf, MessageCircle, MoreHorizontal, X, Send, Pencil, Trash2 } from 'lucide-react';
+import { Heart, Plus, Star, StarHalf, MessageCircle, X, Send, Pencil, Trash2, CornerDownRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Album() {
@@ -70,13 +70,10 @@ export default function Album() {
             .catch(() => setLoading(false));
     };
 
-    // --- AÇÃO DE FAVORITAR (APENAS VISUAL) ---
     const handleToggleFavorite = () => {
-        // Apenas inverte o estado visual (true/false)
         setIsFavorite(!isFavorite);
     };
 
-    // --- LÓGICA DE CLIQUE (Review/Stars) ---
     const handleMouseMoveStar = (e, index) => {
         const { left, width } = e.currentTarget.getBoundingClientRect();
         const percent = (e.clientX - left) / width;
@@ -121,6 +118,7 @@ export default function Album() {
                 setSubmitting(false);
             });
     };
+
     const handleDeleteReview = (reviewId) => {
         if (!window.confirm("Deseja mesmo excluir esta review? Os comentários serão mantidos.")) return;
         fetch(`http://localhost:5000/api/reviews/${reviewId}`, { method: 'DELETE' })
@@ -164,6 +162,18 @@ export default function Album() {
         }).then(() => fetchAlbumData());
     };
 
+    // --- NOVA LÓGICA: Curtir Comentário ---
+    const handleLikeReply = (reviewId, id_resposta) => {
+        if (!user) return alert("Faça login para curtir");
+        if (!id_resposta) return alert("Este comentário é muito antigo e não suporta curtidas. Teste criar um novo!");
+
+        fetch(`http://localhost:5000/api/reviews/${reviewId}/respostas/${id_resposta}/curtir`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_user: currentUserId, username: user.username })
+        }).then(() => fetchAlbumData());
+    };
+
     const handlePostReply = (reviewId) => {
         if (!user) return alert("Faça login para responder");
         if (!replyText.trim()) return;
@@ -189,6 +199,29 @@ export default function Album() {
             else stars.push(<Star key={i} size={size} color="#374151" fill="rgba(255,255,255,0.05)" />);
         }
         return stars;
+    };
+
+    // --- FUNÇÃO MÁGICA: Transforma @username em links clicáveis azuis ---
+    const renderTextWithMentions = (text) => {
+        if (!text) return null;
+        const parts = text.split(/(@\w+)/g);
+        return parts.map((part, idx) => {
+            if (part.startsWith('@') && part.length > 1) {
+                const username = part.substring(1);
+                return (
+                    <span
+                        key={idx}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/profile/${username}`); }}
+                        style={{ color: '#3b82f6', cursor: 'pointer', fontWeight: '600', transition: 'color 0.2s' }}
+                        onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                    >
+                        {part}
+                    </span>
+                );
+            }
+            return <span key={idx}>{part}</span>;
+        });
     };
 
     if (loading) return <div style={{ minHeight: '100vh', backgroundColor: '#121215', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Carregando...</div>;
@@ -245,7 +278,7 @@ export default function Album() {
                                 <span style={{ fontSize: '24px', fontWeight: 'bold' }}>{album.rating}</span>
                             </div>
 
-                            {/* BOTÃO DE FAVORITAR (Visual Only) */}
+                            {/* BOTÃO DE FAVORITAR */}
                             <button
                                 onClick={handleToggleFavorite}
                                 style={{
@@ -299,12 +332,12 @@ export default function Album() {
                                     key={review._id}
                                     style={{
                                         display: 'flex', gap: '20px', padding: '32px 0',
-                                        borderBottom: '1px solid rgba(255,255,255,0.08)', /* Formato Divider (sem balão) */
+                                        borderBottom: '1px solid rgba(255,255,255,0.08)',
                                     }}
                                 >
                                     {/* Foto do Usuário */}
                                     <div
-                                        onClick={() => navigate(`/profile/${review.id_user}`)}
+                                        onClick={() => navigate(`/profile/${review.username}`)}
                                         style={{
                                             width: '48px', height: '48px', borderRadius: '50%', background: '#222',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -323,7 +356,7 @@ export default function Album() {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                                             <div>
                                                 <span
-                                                    onClick={() => navigate(`/profile/${review.id_user}`)}
+                                                    onClick={() => navigate(`/profile/${review.username}`)}
                                                     style={{ fontWeight: 'bold', fontSize: '16px', cursor: 'pointer' }}
                                                     onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
                                                     onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
@@ -331,7 +364,6 @@ export default function Album() {
                                                     {review.username}
                                                 </span>
 
-                                                {/* Esconde a nota se foi excluída */}
                                                 {!isDeleted && (
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                                                         <div style={{ display: 'flex', gap: '2px' }}>{renderStars(review.nota, 14)}</div>
@@ -345,7 +377,6 @@ export default function Album() {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                                 <span style={{ fontSize: '12px', color: '#6b7280' }}>{review.data_postagem}</span>
 
-                                                {/* Botões Editar / Excluir Review (Só o dono e se não estiver excluída) */}
                                                 {!isDeleted && Number(review.id_user) === currentUserId && (
                                                     <div style={{ display: 'flex', gap: '12px' }}>
                                                         <button
@@ -371,9 +402,9 @@ export default function Album() {
                                             </div>
                                         </div>
 
-                                        {/* Texto da Review */}
+                                        {/* Texto da Review com marcações Mágicas (@) */}
                                         <p style={{ margin: '12px 0 0 0', lineHeight: '1.6', color: isDeleted ? '#ef4444' : '#e5e7eb', fontSize: '15px', fontStyle: isDeleted ? 'italic' : 'normal', opacity: isDeleted ? 0.8 : 1 }}>
-                                            {review.texto}
+                                            {isDeleted ? review.texto : renderTextWithMentions(review.texto)}
                                         </p>
 
                                         {/* Esconde os botões de curtir/responder na review principal se estiver excluída */}
@@ -389,30 +420,22 @@ export default function Album() {
                                                     label={review.respostas?.length || 'Responder'}
                                                     onClick={() => {
                                                         setReplyingTo(replyingTo === review._id ? null : review._id);
-                                                        setReplyText("");
+                                                        setReplyText(`@${review.username} `); // Pré-preenche o @ do dono da review
                                                     }}
                                                 />
                                             </div>
                                         )}
 
-                                        {/* Caixa de Resposta Nova */}
-                                        {replyingTo === review._id && (
-                                            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-                                                <input autoFocus placeholder="Escreva a sua resposta..." value={replyText} onChange={(e) => setReplyText(e.target.value)} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 16px', color: 'white', outline: 'none', transition: 'border 0.2s' }} onFocus={e => e.target.style.borderColor = '#3b82f6'} onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'} />
-                                                <button onClick={() => handlePostReply(review._id)} style={{ background: '#3b82f6', border: 'none', borderRadius: '12px', padding: '0 20px', color: 'white', cursor: 'pointer', fontWeight: 'bold' }}><Send size={16} /></button>
-                                            </div>
-                                        )}
-
                                         {/* Lista de Respostas (Sub-comentários) */}
                                         {review.respostas && review.respostas.length > 0 && (
-                                            <div style={{ marginTop: '24px', paddingLeft: '24px', borderLeft: '2px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                            <div style={{ marginTop: '24px', paddingLeft: '24px', borderLeft: '2px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                                 {review.respostas.map((resp, idx) => {
                                                     const isEditingThisReply = editingReply && editingReply.reviewId === review._id && editingReply.texto === resp.texto;
 
                                                     return (
                                                         <div key={idx} style={{ display: 'flex', gap: '12px' }}>
                                                             <div
-                                                                onClick={() => navigate(`/profile/${resp.id_user}`)}
+                                                                onClick={() => navigate(`/profile/${resp.username}`)}
                                                                 style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#333', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}
                                                             >
                                                                 {resp.imagem_url && resp.imagem_url !== 'default_avatar.png' ? (
@@ -425,7 +448,7 @@ export default function Album() {
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                                         <span
-                                                                            onClick={() => navigate(`/profile/${resp.id_user}`)}
+                                                                            onClick={() => navigate(`/profile/${resp.username}`)}
                                                                             style={{ fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
                                                                             onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
                                                                             onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
@@ -466,7 +489,34 @@ export default function Album() {
                                                                         <button onClick={() => setEditingReply(null)} style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '13px' }}>Cancelar</button>
                                                                     </div>
                                                                 ) : (
-                                                                    <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#d1d5db', lineHeight: '1.5' }}>{resp.texto}</p>
+                                                                    <>
+                                                                        <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#d1d5db', lineHeight: '1.5' }}>
+                                                                            {renderTextWithMentions(resp.texto)}
+                                                                        </p>
+                                                                        
+                                                                        {/* NOVO: Interações do Comentário (Curtir e Responder) */}
+                                                                        <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                                                                            <button 
+                                                                                onClick={() => handleLikeReply(review._id, resp.id_resposta)} 
+                                                                                style={{ background: 'transparent', border: 'none', color: resp.curtidas?.includes(currentUserId) ? '#ef4444' : '#6b7280', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0, transition: '0.2s' }}
+                                                                                onMouseEnter={e => !resp.curtidas?.includes(currentUserId) && (e.currentTarget.style.color = 'white')}
+                                                                                onMouseLeave={e => !resp.curtidas?.includes(currentUserId) && (e.currentTarget.style.color = '#6b7280')}
+                                                                            >
+                                                                                <Heart size={12} fill={resp.curtidas?.includes(currentUserId) ? '#ef4444' : 'none'} /> {resp.curtidas?.length || 0}
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => {
+                                                                                    setReplyingTo(review._id);
+                                                                                    setReplyText(`@${resp.username} `); // Pré-preenche o @ de quem comentou
+                                                                                }} 
+                                                                                style={{ background: 'transparent', border: 'none', color: '#6b7280', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: 0, transition: '0.2s' }}
+                                                                                onMouseEnter={e => e.currentTarget.style.color = 'white'}
+                                                                                onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}
+                                                                            >
+                                                                                <CornerDownRight size={12} /> Responder
+                                                                            </button>
+                                                                        </div>
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -474,6 +524,48 @@ export default function Album() {
                                                 })}
                                             </div>
                                         )}
+
+                                        {/* CAIXA DE RESPOSTA NOVA (Design Modernizado) */}
+                                        {replyingTo === review._id && (
+                                            <div 
+                                                style={{ 
+                                                    marginTop: '20px', display: 'flex', gap: '12px', alignItems: 'center',
+                                                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', 
+                                                    borderRadius: '99px', padding: '6px 6px 6px 16px', transition: 'border 0.2s' 
+                                                }}
+                                                onFocus={(e) => e.currentTarget.style.borderColor = '#3b82f6'}
+                                                onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+                                            >
+                                                <input 
+                                                    autoFocus 
+                                                    placeholder="Adicione um comentário..." 
+                                                    value={replyText} 
+                                                    onChange={(e) => setReplyText(e.target.value)} 
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handlePostReply(review._id);
+                                                    }}
+                                                    style={{ 
+                                                        flex: 1, background: 'transparent', border: 'none', 
+                                                        color: 'white', outline: 'none', fontSize: '14px' 
+                                                    }} 
+                                                />
+                                                <button 
+                                                    onClick={() => handlePostReply(review._id)} 
+                                                    disabled={!replyText.trim()}
+                                                    style={{ 
+                                                        background: replyText.trim() ? '#3b82f6' : 'rgba(255,255,255,0.1)', 
+                                                        border: 'none', borderRadius: '50px', width: '36px', height: '36px',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        color: replyText.trim() ? 'white' : '#666', 
+                                                        cursor: replyText.trim() ? 'pointer' : 'not-allowed', 
+                                                        transition: 'all 0.2s' 
+                                                    }}
+                                                >
+                                                    <Send size={16} style={{ marginLeft: '-2px' }} />
+                                                </button>
+                                            </div>
+                                        )}
+
                                     </div>
                                 </div>
                             );

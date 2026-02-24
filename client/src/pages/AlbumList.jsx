@@ -61,7 +61,7 @@ export default function AlbumList({ apiEndpoint }) {
     fetch(`http://localhost:5000${apiEndpoint}`)
       .then(res => res.json())
       .then(data => {
-        const mapped = data.map(item => ({
+        let mapped = data.map(item => ({
           id: item.id_album,
           title: item.title,
           artist: item.artist || item.nome_artista,
@@ -70,6 +70,16 @@ export default function AlbumList({ apiEndpoint }) {
           year: item.year,
           genre: item.genre
         }));
+
+        // --- CORREÇÃO DE ORDENAÇÃO ---
+        if (location.pathname === '/top-rated') {
+          // Ordena rigorosamente da maior nota para a menor
+          mapped.sort((a, b) => b.rating - a.rating);
+        } else if (location.pathname === '/releases') {
+          // Ordena rigorosamente do ano mais recente para o mais antigo
+          mapped.sort((a, b) => b.year - a.year);
+        }
+
         setAlbums(mapped);
         setLoading(false);
       })
@@ -77,7 +87,7 @@ export default function AlbumList({ apiEndpoint }) {
         console.error("Erro:", err);
         setLoading(false);
       });
-  }, [apiEndpoint]);
+  }, [apiEndpoint, location.pathname]);
 
   // --- LÓGICA DE PESQUISA EM TEMPO REAL ---
   useEffect(() => {

@@ -11,6 +11,7 @@ import addisonImg from '../assets/addison.png';
 import logoAddison from '../assets/addisonlogo.png';
 import PinkPantheress from '../assets/pinkpantheress.jpg';
 import ZaraLarsson from '../assets/zarams.jpg';
+import Katseye from '../assets/katseye.jpg';
 
 export default function Home({ user, onLogout }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -164,8 +165,22 @@ export default function Home({ user, onLogout }) {
     desc: 'Zara Larsson traz o Pop Refrescante de verão de volta aos holofotes de um sol eterno.',
     btnText: 'Visitar Álbum',
     path: '/album/68',
-    }
-  ];
+  },
+  {
+    id: 7,
+    type: 'image',
+    bg: Katseye,
+    badge: 'Em Alta',
+    badgeColor: '#faf88eff',
+    icon: <Music size={12} />,
+    title: 'KATSEYE',
+    titleColor: '#fff024ff',
+    overlay: 'linear-gradient(90deg, #0181b42a 10%, #2d6cca1e 20%, rgba(11, 64, 143, 0) 40%)',
+    desc: 'Grupo global a se conferir.',
+    btnText: 'Visitar Álbum',
+    path: '/album/69',
+  }
+];
 
   // Timer: muda o banner a cada 10s
   useEffect(() => {

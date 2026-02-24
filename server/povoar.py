@@ -43,6 +43,7 @@ db.artists.insert_many([
     {"id_artista": 25, "name": "Grimes", "bio": "Cantora e produtora canadense conhecida por seu estilo experimental e letras provocativas", "genre": "Experimental", "country": "Canada", "formed_year": 2010, "image_url": "https://cdn-images.dzcdn.net/images/artist/8a207720e8bed18bab25883fba019dc7/500x500-000000-80-0-0.jpg"},
     {"id_artista": 26, "name": "PinkPantheress", "bio": "Cantora, produtora e compositora britânica conhecida por música drum-n-bass e estilos de garagem do Reino Unido", "genre": "UK Garage", "country": "Reino Unido", "formed_year": 2021, "image_url": "https://i.scdn.co/image/ab6761610000e5eb6bf10d74063b45938f5d8656"},
     {"id_artista": 27, "name": "Zara Larsson", "bio": "Cantora sueca conhecida por seu pop cativante e letras empoderadoras", "genre": "Pop", "country": "Suécia", "formed_year": 2013, "image_url": "https://i.scdn.co/image/ab6761610000e5eb11be9310ef4b23734c13b5c8"},
+    {"id_artista": 28, "name": "KATSEYE", "bio": "Grupo feminino global com integrantes de várias partes do mundo", "genre": "Pop", "country": "Vários", "formed_year": 2023, "image_url": "https://i.scdn.co/image/ab6761610000e5eb484e326315e09b3f382a7960"},
 
 ])
 
@@ -728,8 +729,19 @@ db.albums.insert_many([
         "genre": "Pop",
         "description": "Álbum que traz o pop fresco e vibrante do verão de volta aos holofotes.",
         "image": "https://cdn-images.dzcdn.net/images/cover/19bf09a63824955c504abea3f958c584/1000x1000-000000-80-0-0.jpg"
+    },
+    {
+        "id_album": 69,
+        "title": "BEAUTIFUL CHAOS",
+        "id_artista": 28,
+        "year": 2025,
+        "genre": "Pop",
+        "description": "EP de estréia do grupo global que mistura elementos do Hyperpop com elementos de K-pop.",
+        "image": "https://cdn-images.dzcdn.net/images/cover/ddcf71c7df8157bf0b7bc84708326434/1000x1000-000000-80-0-0.jpg"
     }
 ])
+
+
 
 
 prefs = {"curtidas": True, "respostas": True, "seguidores": True}
@@ -842,6 +854,12 @@ reviews = [
 
     {"id_user": 7, "id_album": 64, "nota": 4.0, "texto": "uma viagem sonora inexplicável", "curtidas": [9], "respostas": [], "data_postagem": "2026-02-18 20:30:00"},
     {"id_user": 9, "id_album": 64, "nota": 5.0, "texto": "travis não brinca em serviço ne pai. melhor experiencia musical q tive esse ano", "curtidas": [1, 7], "respostas": [], "data_postagem": "2026-02-23 21:50:00"},
+
+    {"id_user": 2, "id_album": 42, "nota": 5.0, "texto": "poucos vao entender a genialidade desse album", "curtidas": [9], "respostas": [], "data_postagem": "2026-02-18 20:30:00"},
+    {"id_user": 9, "id_album": 42, "nota": 1.0, "texto": "desapontou", "curtidas": [1, 7], "respostas": [], "data_postagem": "2026-02-23 21:50:00"},
+    {"id_user": 10, "id_album": 42, "nota": 3.0, "texto": "esperava mais de voce taylor", "curtidas": [1, 7, 8, 9], "respostas": [], "data_postagem": "2026-02-23 21:50:00"},
+    {"id_user": 6, "id_album": 42, "nota": 4.0, "texto": "eu acho que ficou decente, vocês estão exagerando", "curtidas": [1, 7], "respostas": [], "data_postagem": "2026-02-23 21:50:00"},
+    {"id_user": 1, "id_album": 42, "nota": 3.5, "texto": "não era bem isso que eu esperava, mas serve eu acho", "curtidas": [], "respostas": [], "data_postagem": "2026-02-23 21:50:00"},
 ]
 
 # Inserindo o username nas reviews antes de salvar
@@ -850,7 +868,7 @@ for r in reviews:
 
 db.reviews.insert_many(reviews)
 
-# incluindo playlists pro usuario do emerson
+# incluindo playlists
 listas = [
     {
         "id_user": 1,

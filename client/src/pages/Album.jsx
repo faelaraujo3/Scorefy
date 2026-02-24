@@ -277,19 +277,6 @@ export default function Album() {
                                 {renderStars(album.rating, 22)}
                                 <span style={{ fontSize: '24px', fontWeight: 'bold' }}>{album.rating}</span>
                             </div>
-
-                            {/* BOTÃO DE FAVORITAR */}
-                            <button
-                                onClick={handleToggleFavorite}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 28px', borderRadius: '14px',
-                                    backgroundColor: isFavorite ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 255, 255, 0.1)',
-                                    border: isFavorite ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
-                                    color: isFavorite ? '#ef4444' : 'white', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
-                                }}
-                            >
-                                <Heart size={20} fill={isFavorite ? "#ef4444" : "none"} /> {isFavorite ? 'Salvo' : 'Salvar'}
-                            </button>
                         </div>
                     </div>
                 </section>

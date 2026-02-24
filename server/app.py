@@ -249,37 +249,49 @@ def curtir_review(review_id):
     data = request.json
     id_user_curtiu = data.get('id_user')
     
+    # busca quem está curtindo no banco
     user_curtiu = usuarios_col.find_one({"id_user": id_user_curtiu})
     nome_quem_curtiu = user_curtiu.get('username') if user_curtiu else data.get('username', 'Alguém')
     imagem_quem_curtiu = user_curtiu.get('imagem_url') if user_curtiu else "default_avatar.png"
     
-    review_original = criticas_col.find_one_and_update(
-        {"_id": ObjectId(review_id)},
-        {"$addToSet": {"curtidas": id_user_curtiu}}
-    )
-
-    if not review_original:
+    review = criticas_col.find_one({"_id": ObjectId(review_id)})
+    if not review:
         return jsonify({"error": "Review não encontrada"}), 404
 
-    if review_original['id_user'] != id_user_curtiu:
-        user_alvo = usuarios_col.find_one({"id_user": review_original['id_user']})
-        pref = user_alvo.get('pref_notificacoes', {}) if user_alvo else {}
-        
-        if pref.get('curtidas', True):
-            album_db = albuns_col.find_one({"id_album": review_original['id_album']})
-            nome_album = album_db['title'] if album_db else "Desconhecido"
+    ja_curtiu = id_user_curtiu in review.get('curtidas', [])
 
-            notificacoes_col.insert_one({
-                "para_id_user": review_original['id_user'],
-                "mensagem": f"@{nome_quem_curtiu} curtiu sua review do álbum {nome_album}!", 
-                "tipo": "curtida",
-                "imagem_url": imagem_quem_curtiu, 
-                "lida": False,
-                "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "id_album": review_original['id_album']
-            })
+    if ja_curtiu:
+        criticas_col.update_one(
+            {"_id": ObjectId(review_id)},
+            {"$pull": {"curtidas": id_user_curtiu}}
+        )
+        return jsonify({"status": "unliked"}), 200
+    else:
+        criticas_col.update_one(
+            {"_id": ObjectId(review_id)},
+            {"$addToSet": {"curtidas": id_user_curtiu}}
+        )
 
-    return jsonify({"status": "sucesso"}), 200
+        if review['id_user'] != id_user_curtiu:
+            user_alvo = usuarios_col.find_one({"id_user": review['id_user']})
+            pref = user_alvo.get('pref_notificacoes', {}) if user_alvo else {}
+            
+            if pref.get('curtidas', True):
+                album_db = albuns_col.find_one({"id_album": review['id_album']})
+                nome_album = album_db['title'] if album_db else "Desconhecido"
+
+                notificacoes_col.insert_one({
+                    "para_id_user": review['id_user'],
+                    "mensagem": f"@{nome_quem_curtiu} curtiu sua review do álbum {nome_album}!", 
+                    "tipo": "curtida",
+                    "imagem_url": imagem_quem_curtiu, 
+                    "lida": False,
+                    "data": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "id_album": review['id_album']
+                })
+
+        return jsonify({"status": "liked"}), 200
+    
 
 @app.route('/api/notificacoes/<int:id_user>', methods=['GET'])
 def obter_notificacoes(id_user):

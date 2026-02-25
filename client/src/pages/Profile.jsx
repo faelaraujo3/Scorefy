@@ -87,12 +87,36 @@ export default function Profile() {
 
   const handleFollowToggle = async () => {
     if (!user) return alert("Faça login para seguir usuários.");
+    
     try {
         const res = await fetch(`http://localhost:5000/api/users/${profileData.id_user}/follow`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_user_logado: user.id_user })
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ id_user_logado: user.id_user })
         });
-        if (res.ok) { fetchNetwork(profileData.id_user); fetchProfile(); }
-    } catch (e) { console.error(e); }
+        
+        const data = await res.json();
+        
+        if (res.ok) { 
+            const myId = Number(user.id_user);
+            
+            if (data.status === 'followed') {
+               setProfileData(prev => ({
+                   ...prev,
+                   seguidores: Array.from(new Set([...prev.seguidores.map(Number), myId]))
+               }));
+            } else if (data.status === 'unfollowed') {
+               setProfileData(prev => ({
+                   ...prev,
+                   seguidores: prev.seguidores.filter(id => Number(id) !== myId)
+               }));
+            }
+            
+            fetchNetwork(profileData.id_user); 
+        }
+    } catch (e) { 
+        console.error(e); 
+    }
   };
 
   const handleSaveProfile = async () => {

@@ -45,9 +45,9 @@ export default function Home({ user, onLogout }) {
           top_rated: format(data.top_rated),
           new_releases: format(data.new_releases)
         });
-        
+
         // Mantém a compatibilidade com a sua variável safeAlbums caso precise
-        setAlbums(format(data.trending)); 
+        setAlbums(format(data.trending));
         setLoading(false);
       })
       .catch(err => {
@@ -141,6 +141,22 @@ export default function Home({ user, onLogout }) {
     {
       id: 5,
       type: 'image',
+      bg: ZaraLarsson,
+      badge: 'Em Alta',
+      badgeColor: '#faf88eff',
+      icon: <Music size={12} />,
+      title: 'Midnight Sun',
+      titleColor: '#fff024ff',
+      titleFont: "'Parisienne', cursive",
+      titleSize: '65px',
+      overlay: 'linear-gradient(90deg, #0190b4ea 10%, #2dbfca63 40%, rgba(11, 139, 143, 0) 60%)',
+      desc: 'Zara Larsson traz o Pop Refrescante de verão de volta aos holofotes de um sol eterno.',
+      btnText: 'Visitar Álbum',
+      path: '/album/68',
+    },
+    {
+      id: 6,
+      type: 'image',
       bg: addisonImg,
       badge: 'Em Alta',
       badgeColor: '#fffdebff',
@@ -153,34 +169,22 @@ export default function Home({ user, onLogout }) {
       path: '/album/48',
     },
     {
-    id: 6,
-    type: 'image',
-    bg: ZaraLarsson,
-    badge: 'Em Alta', 
-    badgeColor: '#faf88eff',
-    icon: <Music size={12} />,
-    title: 'MIDNIGHT SUN',
-    titleColor: '#fff024ff',
-    overlay: 'linear-gradient(90deg, #0190b4ea 10%, #2dbfca63 40%, rgba(11, 139, 143, 0) 60%)',
-    desc: 'Zara Larsson traz o Pop Refrescante de verão de volta aos holofotes de um sol eterno.',
-    btnText: 'Visitar Álbum',
-    path: '/album/68',
-  },
-  {
-    id: 7,
-    type: 'image',
-    bg: Katseye,
-    badge: 'Em Alta',
-    badgeColor: '#faf88eff',
-    icon: <Music size={12} />,
-    title: 'KATSEYE',
-    titleColor: '#fff024ff',
-    overlay: 'linear-gradient(90deg, #0181b42a 10%, #2d6cca1e 20%, rgba(11, 64, 143, 0) 40%)',
-    desc: 'Grupo global a se conferir.',
-    btnText: 'Visitar Álbum',
-    path: '/album/69',
-  }
-];
+      id: 7,
+      type: 'image',
+      bg: Katseye,
+      badge: 'Em Alta',
+      badgeColor: '#faf88eff',
+      icon: <Music size={12} />,
+      title: 'Katseye',
+      titleColor: '#fff024ff',
+      titleFont: "'Dancing Script', cursive",
+      titleSize: '70px',
+      overlay: 'linear-gradient(90deg, #0181b42a 10%, #2d6cca1e 20%, rgba(11, 64, 143, 0) 40%)',
+      desc: 'Grupo global a se conferir.',
+      btnText: 'Visitar Álbum',
+      path: '/album/69',
+    }
+  ];
 
   // Timer: muda o banner a cada 10s
   useEffect(() => {
@@ -235,13 +239,13 @@ export default function Home({ user, onLogout }) {
               Carregando biblioteca...
             </div>
           ) : isSearching ? (
-            
+
             // TELA DE RESULTADOS DA PESQUISA
-             <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
+            <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
               <h2 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '32px' }}>
                 Resultados para "{searchQuery}"
               </h2>
-              
+
               {/* SEÇÃO 1: ÁLBUNS */}
               {searchResults.albuns?.length > 0 && (
                 <section style={{ marginBottom: '56px' }}>
@@ -250,7 +254,7 @@ export default function Home({ user, onLogout }) {
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '24px' }}>
                     {searchResults.albuns.map(album => (
-                      <AlbumCard key={album.id_album} album={{...album, id: album.id_album, rating: album.rating || 0}} />
+                      <AlbumCard key={album.id_album} album={{ ...album, id: album.id_album, rating: album.rating || 0 }} />
                     ))}
                   </div>
                 </section>
@@ -263,18 +267,18 @@ export default function Home({ user, onLogout }) {
                   </h3>
                   <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
                     {searchResults.artistas.map(art => (
-                      <div 
-                        key={art.id_artista} 
-                        onClick={() => navigate(`/artist/${encodeURIComponent(art.name)}`)} 
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', cursor: 'pointer', transition: 'transform 0.2s', width: '180px' }} 
-                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'} 
+                      <div
+                        key={art.id_artista}
+                        onClick={() => navigate(`/artist/${encodeURIComponent(art.name)}`)}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', cursor: 'pointer', transition: 'transform 0.2s', width: '180px' }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
                         onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                       >
                         <div style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#222', boxShadow: '0 10px 25px rgba(0,0,0,0.5)' }}>
                           {art.image_url ? (
-                            <img src={art.image_url} style={{width:'100%', height:'100%', objectFit:'cover'}} alt={art.name}/>
+                            <img src={art.image_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={art.name} />
                           ) : (
-                            <div style={{width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <User size={64} color="#666" />
                             </div>
                           )}
@@ -294,15 +298,15 @@ export default function Home({ user, onLogout }) {
                   </h3>
                   <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                     {searchResults.usuarios.map(u => (
-                      <div 
-                        key={u.id_user} 
+                      <div
+                        key={u.id_user}
                         onClick={() => navigate(`/profile/${u.username}`)}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '20px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s', width: '150px' }} 
-                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(-4px)'}} 
-                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'; e.currentTarget.style.transform = 'translateY(0)'}}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', cursor: 'pointer', padding: '20px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', transition: 'all 0.2s', width: '150px' }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.transform = 'translateY(-4px)' }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.02)'; e.currentTarget.style.transform = 'translateY(0)' }}
                       >
                         <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', fontSize: '28px', fontWeight: 'bold', color: 'white', boxShadow: '0 8px 20px rgba(0,0,0,0.4)' }}>
-                          {u.imagem_url && u.imagem_url !== 'default_avatar.png' ? <img src={u.imagem_url} style={{width:'100%', height:'100%', objectFit:'cover'}} alt={u.username}/> : u.username.charAt(0).toUpperCase()}
+                          {u.imagem_url && u.imagem_url !== 'default_avatar.png' ? <img src={u.imagem_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={u.username} /> : u.username.charAt(0).toUpperCase()}
                         </div>
                         <div style={{ textAlign: 'center', width: '100%' }}>
                           <div style={{ fontWeight: 'bold', fontSize: '15px', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.nome}</div>
@@ -419,8 +423,9 @@ export default function Home({ user, onLogout }) {
                           <h1
                             style={{
                               fontSize: slide.titleSize || '40px',
+                              fontFamily: slide.titleFont || 'inherit',
                               color: slide.titleColor || 'white',
-                              fontWeight: '900',
+                              fontWeight: slide.titleFont ? '700' : '900',
                               marginBottom: '12px',
                               lineHeight: 1.1,
                               textShadow: '0 2px 4px rgba(0,0,0,0.3)'

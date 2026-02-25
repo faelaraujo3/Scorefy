@@ -796,9 +796,9 @@ usuarios = [
         "albuns_favoritos": [67, 55], "seguidores": [], "seguindo": [2], "notifications": [], "pref_notificacoes": prefs
     },
     {
-        "id_user": 9, "email": "rafa.beats@gmail.com", "senha": "123", "username": "rafael_beats", 
-        "nome": "Rafael Alves", "bio": "trap e rap todos os dias.", 
-        "localizacao": "Porto Alegre, SC", "imagem_url": "https://i.pinimg.com/736x/fb/d8/3e/fbd83e95f124f538e66234ffef826a24.jpg",
+        "id_user": 9, "email": "rafael@email.com", "senha": "123", "username": "faelbin", 
+        "nome": "fael", "bio": "pop trap e rap.", 
+        "localizacao": "Porto Alegre, SC", "imagem_url": "https://i.pinimg.com/736x/11/ca/f8/11caf8f0f748eda5722c1013c665a732.jpg",
         "albuns_favoritos": [64, 56], "seguidores": [3], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
     },
     {

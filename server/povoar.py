@@ -797,9 +797,9 @@ usuarios = [
     },
     {
         "id_user": 9, "email": "rafael@email.com", "senha": "123", "username": "faelbin", 
-        "nome": "fael", "bio": "pop trap e rap.", 
-        "localizacao": "Porto Alegre, SC", "imagem_url": "https://i.pinimg.com/736x/11/ca/f8/11caf8f0f748eda5722c1013c665a732.jpg",
-        "albuns_favoritos": [64, 56], "seguidores": [3], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
+        "nome": "fael", "bio": "pop e rap.", 
+        "localizacao": "Joao Monlevade, MG", "imagem_url": "https://i.pinimg.com/736x/11/ca/f8/11caf8f0f748eda5722c1013c665a732.jpg",
+        "albuns_favoritos": [64, 56, 15, 45], "seguidores": [3], "seguindo": [], "notifications": [], "pref_notificacoes": prefs
     },
     {
         "id_user": 10, "email": "julia.mendes@gmail.com", "senha": "123", "username": "julhinha", 
@@ -884,6 +884,14 @@ listas = [
         "descricao": "gen z.",
         "capa_personalizada": "https://i.pinimg.com/736x/9e/17/7c/9e177c7df4bc92d09c2397a9fa7f4e34.jpg",
         "albuns": [45, 15, 42, 22, 55, 67], 
+        "data_criacao": "2026-02-23 10:30:00"
+    },
+    {
+        "id_user": 9,
+        "titulo": "chill vibes",
+        "descricao": "álbuns pra relaxar.",
+        "capa_personalizada": "https://i.pinimg.com/736x/1e/6b/21/1e6b2114a7c2fc5768f68c3ec358ef2a.jpg",
+        "albuns": [45, 15, 22, 55, 67], 
         "data_criacao": "2026-02-23 10:30:00"
     }
 ]
